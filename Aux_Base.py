@@ -35,11 +35,10 @@ import logging
 # logging has been set up in fpdb.py or HUD_main.py, use their settings:
 log = logging.getLogger("hud")
 
-from PyQt5.QtCore import Qt, QObject
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QWidget
 
 # FPDB
-import Card
 
 
 # This holds all card images in a nice lookup table. One instance is
@@ -90,8 +89,6 @@ class Aux_Window(object):
         """Determine player id from seat number, given stat_dict."""
         
         # hh_seats is a list of the actual seat numbers used in the hand history.
-        #  Some sites (e.g. iPoker) miss out some seat numbers if max is <10,
-        #  e.g. iPoker 6-max uses seats 1,3,5,6,8,10 NOT 1,2,3,4,5,6
         seat = self.hud.layout.hh_seats[seat]
         return next(
             (
@@ -300,11 +297,8 @@ class Aux_Seats(Aux_Window):
         for key in self.hud.stat_dict:
             if self.hud.stat_dict[key]['screen_name'] == self.config.supported_sites[self.hud.site].screen_name:
                 # Seat from stat_dict is the seat num recorded in the hand history and database
-                # For tables <10-max, some sites omit some seat nums (e.g. iPoker 6-max uses 1,3,5,6,8,10)
                 # The seat nums in the hh from the site are recorded in config file for each layout, and available
                 # here as the self.layout.hh_seats list
-                #    (e.g. for iPoker - [None,1,3,5,6,8,10];
-                #      for most sites-  [None, 1,2,3,4,5,6]
                 # we need to match 'seat' from hand history with the postion in the list, as the hud
                 #  always numbers its stat_windows using consecutive numbers (e.g. 1-6)
 

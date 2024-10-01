@@ -34,12 +34,10 @@ import codecs
 import os
 import sys
 import inspect
-import string
 import shutil
 import locale
 import re
 import xml.dom.minidom
-from xml.dom.minidom import Node
 
 import platform
 
@@ -314,13 +312,9 @@ def normalizePath(path):
 APPLICATION_NAME_SHORT = 'fpdb'
 APPLICATION_VERSION = 'xx.xx.xx'
 
-DATABASE_TYPE_POSTGRESQL = 'postgresql'
 DATABASE_TYPE_SQLITE = 'sqlite'
-DATABASE_TYPE_MYSQL = 'mysql'
 DATABASE_TYPES = (
-        DATABASE_TYPE_POSTGRESQL,
-        DATABASE_TYPE_SQLITE,
-        DATABASE_TYPE_MYSQL,
+        DATABASE_TYPE_SQLITE
         )
 
 LOCALE_ENCODING = locale.getpreferredencoding()
@@ -360,8 +354,6 @@ class Layout(object):
         self.location = [None for x in range(self.max+1)] # fill array with max seats+1 empty entries
         # hh_seats is used to map the seat numbers specified in hand history files (and stored in db) onto 
         #   the contiguous integerss, 1 to self.max, used to index hud stat_windows (and aw seat_windows) for display
-        #   For most sites these numbers are the same, but some sites (e.g. iPoker) omit seat numbers in hand histories
-        #   for tables smaller than 10-max.   
         self.hh_seats= [None for x in range(self.max+1)] # fill array with max seats+1 empty entries
 
         for location_node in node.getElementsByTagName('location'):
@@ -1081,16 +1073,6 @@ class Config(object):
         db = self.get_db_parameters()
         # Set the db path if it's defined in HUD_config.xml (sqlite only), otherwise place in config path.
         self.dir_database = db['db-path'] if db['db-path'] else os.path.join(CONFIG_PATH, u'database')
-        if db['db-password'] == 'YOUR MYSQL PASSWORD':
-            df_file = self.find_default_conf()
-            if df_file is None: # this is bad
-                pass
-            else:
-                df_parms = self.read_default_conf(df_file)
-                self.set_db_parameters(db_name = 'fpdb', db_ip = df_parms['db-host'],
-                                     db_user = df_parms['db-user'],
-                                     db_pass = df_parms['db-password'])
-                self.save(file=os.path.join(CONFIG_PATH, "HUD_config.xml"))
         
         if doc.getElementsByTagName("raw_hands") == []:
             self.raw_hands = RawHands()
@@ -1580,11 +1562,7 @@ class Config(object):
     
     def get_backend(self, name):
         """Returns the number of the currently used backend"""
-        if name == DATABASE_TYPE_MYSQL:
-            ret = 2
-        elif name == DATABASE_TYPE_POSTGRESQL:
-            ret = 3
-        elif name == DATABASE_TYPE_SQLITE:
+        if name == DATABASE_TYPE_SQLITE:
             ret = 4
             # sqlcoder: this assignment fixes unicode problems for me with sqlite (windows, cp1252)
             #           feel free to remove or improve this if you understand the problems

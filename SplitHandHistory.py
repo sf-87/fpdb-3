@@ -65,12 +65,6 @@ class SplitHandHistory(object):
         if self.re_SplitHands.match('\n\n\n'):
             self.line_delimiter = '\n\n\n'
             
-        #Add new line addendum for sites which match SplitHand to next line as well
-        if filter_name == 'OnGame':
-            self.line_addendum = '*'
-        if filter_name == 'Merge':
-            self.line_addendum = '<game'
-            
         #Open the gargantuan file
         for kodec in self.__listof(codepage):
             try:

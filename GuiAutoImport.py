@@ -21,8 +21,7 @@ if __name__ == "__main__":
 # logging has been set up in fpdb.py or HUD_main.py, use their settings:
 log = logging.getLogger("importer")
 
-if os.name == "nt":
-    import win32console
+import win32console
 
 def to_raw(string):
     return fr"{string}"

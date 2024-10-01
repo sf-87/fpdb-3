@@ -21,7 +21,7 @@ from __future__ import print_function
 #import L10n
 #_ = L10n.get_translation()
 
-from time import time, strftime
+from time import time
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import (QStandardItem, QStandardItemModel)
@@ -157,12 +157,7 @@ class GuiTourneyPlayerStats(QSplitter):
                     value = 111
                 if column[colalias] == 'siteName':
                     if result[sqlrow][colnames.index('speed')] != 'Normal':
-                        if (result[sqlrow][colnames.index('speed')] == 'Hyper' 
-                            and result[sqlrow][colnames.index('siteName')] ==
-                            'Full Tilt Poker'):
-                            value = value + ' ' + 'Super Turbo'
-                        else:
-                            value = value + ' ' + result[sqlrow][colnames.index('speed')]
+                        value = value + ' ' + result[sqlrow][colnames.index('speed')]
                 if column[colalias] == 'knockout' or column[colalias] == 'reEntry':
                     if result[sqlrow][colnames.index(column[colalias])] == 1:
                         value = 'Yes'
@@ -283,10 +278,7 @@ class GuiTourneyPlayerStats(QSplitter):
         query = query.replace("<flagtest>", flagtest)
 
         # allow for differences in sql cast() function:
-        if self.db.backend == self.db.MYSQL_INNODB:
-            query = query.replace("<signed>", 'signed ')
-        else:
-            query = query.replace("<signed>", '')
+        query = query.replace("<signed>", '')
 
         # Filter on dates
         start_date, end_date = self.filters.getDates()

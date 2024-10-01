@@ -22,31 +22,16 @@
 
 # TODO: check to keep only the needed modules
 
-import re
 import sys
 import logging
-import os
-import os.path
-from decimal_wrapper import Decimal
-import operator
-import time, datetime
-from copy import deepcopy
 from Exceptions import *
 import codecs
 
 import pprint
-import DerivedStats
-import Card
 import Database
 from HandHistoryConverter import HandHistoryConverter
 
 log = logging.getLogger("parser")
-
-try:
-    import xlrd
-except:
-    xlrd = None
-    log.info(("xlrd not found. Required for importing Excel tourney results files"))
 
 class TourneySummary(object):
 
@@ -56,11 +41,7 @@ class TourneySummary(object):
     LCS = {'H':'h', 'D':'d', 'C':'c', 'S':'s'}                                                  # SAL- TO KEEP ??
     SYMBOL = {'USD': '$', 'EUR': u'$', 'T$': '', 'play': ''}
     MS = {'horse' : 'HORSE', '8game' : '8-Game', 'hose'  : 'HOSE', 'ha': 'HA'}
-    SITEIDS = {'Fulltilt':1, 'Full Tilt Poker':1, 'PokerStars':2, 'Everleaf':3, 'Boss':4, 'OnGame':5,
-               'UltimateBet':6, 'Betfair':7, 'Absolute':8, 'PartyPoker':9, 'PacificPoker':10,
-               'Partouche':11, 'Merge':12, 'PKR':13, 'iPoker':14, 'Winamax':15, 'Everest':16,
-               'Cake':17, 'Entraction':18, 'BetOnline':19, 'Microgaming':20, 'Bovada':21, 'Enet':22,
-               'SealsWithClubs': 23, 'WinningPoker': 24, 'Run It Once Poker': 26}
+    SITEIDS = {'PokerStars':1}
 
 
     def __init__(self, db, config, siteName, summaryText, in_path='-', builtFrom="HHC", header=""):
@@ -240,7 +221,7 @@ class TourneySummary(object):
         # BuyIn/Fee can be at 0/0 => match may not be easy
         # Only one existinf Tourney entry for Matrix Tourneys, but multiple Summary files
         # Starttime may not match the one in the Summary file : HH = time of the first Hand / could be slighltly different from the one in the summary file
-        # Note: If the TourneyNo could be a unique id .... this would really be a relief to deal with matrix matches ==> Ask on the IRC / Ask Fulltilt ??
+        # Note: If the TourneyNo could be a unique id .... this would really be a relief to deal with matrix matches ==> Ask on the IRC ??
         self.db.set_printdata(printtest)
         
         self.playerIds = self.db.getSqlPlayerIDs(self.players.keys(), self.siteId, self.hero)
@@ -319,29 +300,6 @@ winnings    (int) the money the player ended the tourney with (can be 0, or -1 i
 
     def printSummary(self):
         self.writeSummary(sys.stdout)
-        
-    @staticmethod            
-    def summaries_from_excel(filenameXLS, tourNoField):
-        wb = xlrd.open_workbook(filenameXLS)
-        sh = wb.sheet_by_index(0)
-        summaryTexts, rows, header, keys, entries = [], [], None, None, {}
-        for rownum in range(sh.nrows):
-            if rownum==0:
-                header = sh.row_values(rownum)[0]
-            elif tourNoField in sh.row_values(rownum):
-                keys = [str(c).encode('utf-8') for c in sh.row_values(rownum)]
-            elif keys!=None:
-                rows.append([str(c).encode('utf-8') for c in sh.row_values(rownum)])
-        for row in rows:
-            data = dict(zip(keys, row))
-            data['header'] = header
-            if len(data[tourNoField])>0:
-                if entries.get(data[tourNoField])==None:
-                    entries[data[tourNoField]] = []
-                entries[data[tourNoField]].append(data)
-        for k, item in entries.iteritems():
-            summaryTexts.append(item)
-        return summaryTexts
 
     @staticmethod
     def readFile(self, filename):

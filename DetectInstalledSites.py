@@ -41,19 +41,12 @@ Todo:
 
 """
 
-import platform
 import os
 import sys
 
 import Configuration
 
-if platform.system() == 'Windows':
-    #import winpaths
-    #PROGRAM_FILES = winpaths.get_program_files()
-    #LOCAL_APPDATA = winpaths.get_local_appdata()
-    import os
-    PROGRAM_FILES = os.getenv('ProgramW6432')
-    LOCAL_APPDATA = os.getenv('APPDATA')
+LOCAL_APPDATA = os.getenv('APPDATA')
 
 class DetectInstalledSites(object):
 
@@ -74,24 +67,9 @@ class DetectInstalledSites(object):
         #is little advantage in querying the sites table at the moment.
         #plus we can run from the command line as no dependencies
         #
-        self.supportedSites = [ "Full Tilt Poker",
-                                "PartyPoker",
-                                "Merge",
-                                "PokerStars"]#,
-                                #"Everleaf",
-                                #"Win2day",
-                                #"OnGame",
-                                #"UltimateBet",
-                                #"Betfair",
-                                #"Absolute",
-                                #"PacificPoker",
-                                #"Partouche",
-                                #"PKR",
-                                #"iPoker",
-                                #"Winamax",
-                                #"Everest" ]
+        self.supportedSites = [ "PokerStars"]
 
-        self.supportedPlatforms = ["Linux", "XP", "Win7"]
+        self.supportedPlatforms = ["Win7"]
 
         if sitename == "All":
             for siteiter in self.supportedSites:
@@ -111,14 +89,8 @@ class DetectInstalledSites(object):
         self.tspathfound = ""
         self.herofound = ""
 
-        if siteToDetect == "Full Tilt Poker":
-            self.detectFullTilt()
-        elif siteToDetect == "PartyPoker":
-            self.detectPartyPoker()
-        elif siteToDetect == "PokerStars":
+        if siteToDetect == "PokerStars":
             self.detectPokerStars()
-        elif siteToDetect == "Merge":
-            self.detectMergeNetwork()
 
         if (self.hhpathfound and self.herofound):
             encoding = sys.getfilesystemencoding()
@@ -132,46 +104,10 @@ class DetectInstalledSites(object):
         else:
             return {"detected":False, "hhpath":u"", "heroname":u"", "tspath":u""}
 
-    def detectFullTilt(self):
-
-        if self.Config.os_family == "Linux":
-            hhp=os.path.expanduser("~/.wine/drive_c/Program Files/Full Tilt Poker/HandHistory/")
-        elif self.Config.os_family == "XP":
-            hhp=os.path.expanduser(PROGRAM_FILES+"\\Full Tilt Poker\\HandHistory\\")
-        elif self.Config.os_family == "Win7":
-            hhp=os.path.expanduser(PROGRAM_FILES+"\\Full Tilt Poker\\HandHistory\\")
-        else:
-            return
-
-        if os.path.exists(hhp):
-            self.hhpathfound = hhp
-        else:
-            return
-
-        try:
-            self.herofound = os.listdir(self.hhpathfound)[0]
-            self.hhpathfound = self.hhpathfound + self.herofound
-        except:
-            pass
-
-        return
-        
     def detectPokerStars(self):
 
-        if self.Config.os_family == "Linux":
-            hhp=os.path.expanduser("~/.wine/drive_c/Program Files/PokerStars/HandHistory/")
-            tsp=os.path.expanduser("~/.wine/drive_c/Program Files/PokerStars/TournSummary/")
-        elif self.Config.os_family == "XP":
-            hhp=os.path.expanduser(PROGRAM_FILES+"\\PokerStars\\HandHistory\\")
-            tsp=os.path.expanduser(PROGRAM_FILES+"\\PokerStars\\TournSummary\\")
-        elif self.Config.os_family == "Win7":
-            hhp=os.path.expanduser(LOCAL_APPDATA+"\\PokerStars\\HandHistory\\")
-            tsp=os.path.expanduser(LOCAL_APPDATA+"\\PokerStars\\TournSummary\\")
-        elif self.Config.os_family == "Mac":
-            hhp=os.path.expanduser("~/Library/Application Support/PokerStars/HandHistory/")
-            tsp=os.path.expanduser("~/Library/Application Support/PokerStars/TournSummary/")
-        else:
-            return
+        hhp=os.path.expanduser(LOCAL_APPDATA+"\\PokerStars\\HandHistory\\")
+        tsp=os.path.expanduser(LOCAL_APPDATA+"\\PokerStars\\TournSummary\\")
 
         if os.path.exists(hhp):
             self.hhpathfound = hhp
@@ -187,66 +123,5 @@ class DetectInstalledSites(object):
                 self.tspathfound = self.tspathfound + self.herofound
         except:
             pass
-
-        return
-
-    def detectPartyPoker(self):
-
-        if self.Config.os_family == "Linux":
-            hhp=os.path.expanduser("~/.wine/drive_c/Program Files/PartyGaming/PartyPoker/HandHistory/")
-        elif self.Config.os_family == "XP":
-            hhp=os.path.expanduser(PROGRAM_FILES+"\\PartyGaming\\PartyPoker\\HandHistory\\")
-        elif self.Config.os_family == "Win7":
-            hhp=os.path.expanduser("c:\\Programs\\PartyGaming\\PartyPoker\\HandHistory\\")
-        else:
-            return
-
-        if os.path.exists(hhp):
-            self.hhpathfound = hhp
-        else:
-            return
-
-        dirs = os.listdir(self.hhpathfound)
-        if "XMLHandHistory" in dirs:
-            dirs.remove("XMLHandHistory")
-
-        try:
-            self.herofound = dirs[0]
-            self.hhpathfound = self.hhpathfound + self.herofound
-        except:
-            pass
-
-        return
-
-    def detectMergeNetwork(self):
-
-# Carbon is the principal room on the Merge network but there are many other skins.
-
-# Normally, we understand that a player can only be valid at one
-# room on the Merge network so we will exit once successful
-
-# Many thanks to Ilithios for the PlayersOnly information
-
-        merge_skin_names = ["CarbonPoker", "PlayersOnly", "BlackChipPoker", "RPMPoker", "HeroPoker",
-                            "PDCPoker", ]
-        
-        for skin in merge_skin_names:
-            if self.Config.os_family == "Linux":
-                hhp=os.path.expanduser("~/.wine/drive_c/Program Files/"+skin+"/history/")
-            elif self.Config.os_family == "XP":
-                hhp=os.path.expanduser(PROGRAM_FILES+"\\"+skin+"\\history\\")            
-            elif self.Config.os_family == "Win7":
-                hhp=os.path.expanduser(PROGRAM_FILES+"\\"+skin+"\\history\\")
-            else:
-                return
-
-            if os.path.exists(hhp):
-                self.hhpathfound = hhp
-                try:
-                    self.herofound = os.listdir(self.hhpathfound)[0]
-                    self.hhpathfound = self.hhpathfound + self.herofound
-                    break
-                except:
-                    continue
 
         return

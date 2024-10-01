@@ -64,7 +64,7 @@ def fpdb_options():
     parser.add_option("-o", "--outpath", dest="outpath", metavar="FILE", default=None,
                     help=("Out path in quiet mode"))
     parser.add_option("-a", "--archive", action="store_true", dest="archive", default=False,
-                    help=("File to be split is a PokerStars or Full Tilt Poker archive file"))
+                    help=("File to be split is a PokerStars file"))
     parser.add_option("-t", "--testdata", action="store_true", dest="testData", default=False,
                     help=("Developer option to print regression test data"))
     parser.add_option("-n", "--numhands", dest="hands", default="100", type="int",
@@ -88,38 +88,8 @@ def site_alias(alias):
     """Function for converting various site aliases to the FPDB name"""
     tmp = alias
     aliases = {
-                "Absolute"       : "Absolute",
-                "AP"             : "Absolute",
-                "Betfair"        : "Betfair",
-                "BetOnline"      : "BetOnline",
-                "Boss"           : "Boss",
-                "Bovada"         : "Bovada",
-                "Cake"           : "Cake",
-                "Enet"           : "Enet",
-                "Entraction"     : "Entraction",
-                "Everest"        : "Everest",
-                "Everleaf"       : "Everleaf",
-                "FTP"            : "Full Tilt Poker",
-                "Full Tilt Poker": "Full Tilt Poker",
-                "iPoker"         : "iPoker",
-                "Merge"          : "Merge",
-                "Microgaming"    : "Microgaming",
-                "OnGame"         : "OnGame",
-                "PacificPoker"   : "PacificPoker",
-                "Pacific"        : "PacificPoker",
-                "Party"          : "PartyPoker",
-                "PartyPoker"     : "PartyPoker",
-                "Pkr"            : "Pkr",
-                "PKR"            : "Pkr",
                 "PokerStars"     : "PokerStars",
-                "SealsWithClubs" : "SealsWithClubs",
                 "Stars"          : "PokerStars",
-                "PT"             : "PokerTracker",
-                "PokerTracker"   : "PokerTracker",
-                "UltimateBet"    : "UltimateBet",
-                "UB"             : "UltimateBet",
-                "Winamax"        : "Winamax",
-                "Win2day"        : "Boss",
               }
     try:
         tmp = aliases[alias]

@@ -32,13 +32,6 @@ import logging
 # logging has been set up in fpdb.py or HUD_main.py, use their settings:
 log = logging.getLogger("hud")
 
-import ctypes
-
-try:
-    from AppKit import NSView, NSWindowAbove
-except ImportError:
-    NSView = None
-
 from PyQt5.QtGui import QCursor
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QGridLayout, QLabel, QVBoxLayout, QWidget
@@ -64,16 +57,7 @@ class Popup(QWidget):
         #child popups are positioned at the mouse pointer and must be killed if
         # the parent is killed
         parent = parent_popup or win
-        if config.os_family == 'Mac' and NSView is not None:
-            selfwinid = self.effectiveWinId()
-            selfcvp = ctypes.c_void_p(int(selfwinid))
-            selfview = NSView(c_void_p=selfcvp)
-            parentwinid = parent.effectiveWinId()
-            parentcvp = ctypes.c_void_p(int(parentwinid))
-            parentview = NSView(c_void_p=parentcvp)
-            parentview.window().addChildWindow_ordered_(selfview.window(), NSWindowAbove)
-        else:
-            self.windowHandle().setTransientParent(self.parent().windowHandle())
+        self.windowHandle().setTransientParent(self.parent().windowHandle())
         parent.destroyed.connect(self.destroy)
         self.move(QCursor.pos())
 

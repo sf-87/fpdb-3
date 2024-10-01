@@ -26,7 +26,7 @@ from __future__ import print_function
 # TODO: get writehand() encoding correct
 
 import sys
-from decimal_wrapper import Decimal
+from decimal import Decimal
 import datetime
 
 import pprint
@@ -647,8 +647,6 @@ class Hand(object):
         return c
 
     def addAllIn(self, street, player, amount):
-        """ For sites (currently only Merge & Microgaming) which record "all in" as a special action, 
-            which can mean either "calls and is all in" or "raises all in"."""
         self.checkPlayerExists(player, 'addAllIn')
         amount = amount.replace(u',', u'') #some sites have commas
         Ai = Decimal(amount)
@@ -1168,7 +1166,7 @@ class HoldemOmahaHand(Hand):
             hhc.readShowdownActions(self)
             # Read actions in street order
             for street, text in list(self.streets.items()):
-                if text and (street != "PREFLOP"): #TODO: the except PREFLOP shouldn't be necessary, but regression-test-files/cash/Everleaf/Flop/NLHE-10max-USD-0.01-0.02-201008.2Way.All-in.pre.txt fails without it
+                if text and (street != "PREFLOP"):
                     hhc.readCommunityCards(self, street)
             for street in self.actionStreets:
                 if self.streets[street] or gametype['split']:
@@ -1199,7 +1197,7 @@ class HoldemOmahaHand(Hand):
         else:
             if self.gametype['category'] == 'aof_omaha':
                 self.addHoleCards('FLOP', player, open=[], closed=cards, shown=shown, mucked=mucked, dealt=dealt)
-            elif len(cards) in (2, 3, 4, 6) or self.gametype['category'] in ('5_omahahi', '5_omaha8', 'cour_hi', 'cour_hilo', 'fusion'):  # avoid adding board by mistake (Everleaf problem)
+            elif len(cards) in (2, 3, 4, 6) or self.gametype['category'] in ('5_omahahi', '5_omaha8', 'cour_hi', 'cour_hilo', 'fusion'):
                 self.addHoleCards('PREFLOP', player, open=[], closed=cards, shown=shown, mucked=mucked, dealt=dealt)
 
             elif len(cards) == 5:     # cards holds a winning hand, not hole cards

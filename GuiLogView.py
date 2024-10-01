@@ -17,18 +17,14 @@
 
 from __future__ import division
 
-from past.utils import old_div
 #import L10n
 #_ = L10n.get_translation()
 
-import queue
-
 from PyQt5.QtGui import (QStandardItem, QStandardItemModel)
-from PyQt5.QtWidgets import (QApplication, QDialog, QPushButton, QHBoxLayout, QRadioButton,
+from PyQt5.QtWidgets import (QApplication, QPushButton, QHBoxLayout, QRadioButton,
                              QTableView, QVBoxLayout, QWidget, QCheckBox)
 
 import os
-import traceback
 import logging
 from itertools import groupby
 from functools import partial

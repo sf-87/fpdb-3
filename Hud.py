@@ -38,7 +38,6 @@ import copy
 log = logging.getLogger("hud")
 
 #    FreePokerTools modules
-import Configuration
 import Database
 import Hand
 

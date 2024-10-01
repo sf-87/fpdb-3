@@ -104,8 +104,6 @@ class Table_Window(object):
             print('table_number:')
             print(type(table_number))
             print(table_number)
-            #temp bug correction for ipoker must investigate 
-            #if table_number is not an interger
 
             print('table_number error:')
             print(type(table_number))

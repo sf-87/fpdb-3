@@ -28,9 +28,8 @@ from past.utils import old_div
 #    Standard Library modules
 
 import os  # todo: remove this once import_dir is in fpdb_import
-from time import time, sleep, process_time
+from time import time, process_time
 import datetime
-import queue
 import shutil
 import re
 
@@ -48,11 +47,6 @@ import Configuration
 import IdentifySite
 
 from Exceptions import FpdbParseError, FpdbHandDuplicate, FpdbHandPartial
-
-try:
-    import xlrd
-except:
-    xlrd = None
 
 if __name__ == "__main__":
     Configuration.set_logfile("fpdb-log.txt")
@@ -604,34 +598,26 @@ class Importer(object):
         QCoreApplication.processEvents()
             
     def readFile(self, obj, filename, site):
-        if filename.endswith('.xls') or filename.endswith('.xlsx') and xlrd:
-            obj.hhtype = "xls"
-            if site=='PokerStars':
-                tourNoField = 'Tourney'
-            else:
-                tourNoField = 'tournament key'
-            summaryTexts = obj.summaries_from_excel(filename, tourNoField)
+        foabs = obj.readFile(obj, filename)
+        if foabs is None:
+            return None
+        re_Split = obj.getSplitRe(obj,foabs)
+        summaryTexts = re.split(re_Split, foabs)
+        # Summary identified but not split
+        if len(summaryTexts)==1:
+            return summaryTexts
         else:
-            foabs = obj.readFile(obj, filename)
-            if foabs is None:
-                return None
-            re_Split = obj.getSplitRe(obj,foabs)
-            summaryTexts = re.split(re_Split, foabs)
-            # Summary identified but not split
-            if len(summaryTexts)==1:
-                return summaryTexts
-            else:
-                # The summary files tend to have a header
-                # Remove the first entry if it has < 150 characters
-                if len(summaryTexts) > 1 and len(summaryTexts[0]) <= 150:
-                    del summaryTexts[0]
-                    log.warn(("TourneyImport: Removing text < 150 characters from start of file"))
-                    
-                # Sometimes the summary files also have a footer
-                # Remove the last entry if it has < 100 characters   
-                if len(summaryTexts) > 1 and len(summaryTexts[-1]) <= 100:
-                    summaryTexts.pop()
-                    log.warn(("TourneyImport: Removing text < 100 characters from end of file"))
+            # The summary files tend to have a header
+            # Remove the first entry if it has < 150 characters
+            if len(summaryTexts) > 1 and len(summaryTexts[0]) <= 150:
+                del summaryTexts[0]
+                log.warn(("TourneyImport: Removing text < 150 characters from start of file"))
+                
+            # Sometimes the summary files also have a footer
+            # Remove the last entry if it has < 100 characters   
+            if len(summaryTexts) > 1 and len(summaryTexts[-1]) <= 100:
+                summaryTexts.pop()
+                log.warn(("TourneyImport: Removing text < 100 characters from end of file"))
         return summaryTexts 
         
 class ImportProgressDialog(QDialog):

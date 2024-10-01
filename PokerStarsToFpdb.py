@@ -23,9 +23,7 @@
 
 # TODO: straighten out discards for draw games
 
-import sys
 from HandHistoryConverter import *
-from decimal_wrapper import Decimal
 
 # PokerStars HH Format
 
@@ -132,7 +130,7 @@ class PokerStars(HandHistoryConverter):
 
     # Static regexes
     re_GameInfo     = re.compile(u"""
-          (?P<SITE>PokerStars|POKERSTARS|Hive\sPoker|Full\sTilt|PokerMaster|Run\sIt\sOnce\sPoker|BetOnline|PokerBros|MPLPoker|SupremaPoker)(?P<TITLE>\sGame|\sHand|\sHome\sGame|\sHome\sGame\sHand|Game|\s(Zoom|Rush)\sHand|\sGAME)\s\#(?P<HID>[0-9]+):\s+
+          (?P<SITE>PokerStars|POKERSTARS)(?P<TITLE>\sGame|\sHand|\sHome\sGame|\sHome\sGame\sHand|Game|\s(Zoom|Rush)\sHand|\sGAME)\s\#(?P<HID>[0-9]+):\s+
           (\{.*\}\s+)?((?P<TOUR>((Zoom|Rush)\s)?(Tournament|TOURNAMENT))\s\#                # open paren of tournament info
           (?P<TOURNO>\d+),\s(Table\s\#(?P<HIVETABLE>\d+),\s)?
           # here's how I plan to use LS
@@ -176,7 +174,7 @@ class PokerStars(HandHistoryConverter):
           (Seat\s\#(?P<BUTTON>\d+)\sis\sthe\sbutton)?""", 
           re.MULTILINE|re.VERBOSE)
 
-    re_Identify     = re.compile(u'(PokerStars|POKERSTARS|Hive\sPoker|Full\sTilt|PokerMaster|Run\sIt\sOnce\sPoker|BetOnline|PokerBros|MPLPoker|SupremaPoker)(\sGame|\sHand|\sHome\sGame|\sHome\sGame\sHand|Game|\s(Zoom|Rush)\sHand|\sGAME)\s\#\d+:')
+    re_Identify     = re.compile(u'(PokerStars|POKERSTARS)(\sGame|\sHand|\sHome\sGame|\sHome\sGame\sHand|Game|\s(Zoom|Rush)\sHand|\sGAME)\s\#\d+:')
     re_SplitHands   = re.compile('(?:\s?\n){2,}')
     re_TailSplitHands   = re.compile('(\n\n\n+)')
     re_Button       = re.compile('Seat #(?P<BUTTON>\d+) is the button', re.MULTILINE)
@@ -313,22 +311,6 @@ class PokerStars(HandHistoryConverter):
             info['split'] = True
         else:
             info['split'] = False
-        if 'SITE' in mg:
-            if mg['SITE'] == 'PokerMaster':
-                self.sitename = "PokerMaster"
-                self.siteId   = 25 
-                m1  = self.re_HandInfo.search(handText,re.DOTALL)
-                if m1 and '_5Cards_' in m1.group('TABLE'):
-                    info['category'] = '5_omahahi'
-            elif mg['SITE'] == 'Run It Once Poker':
-                self.sitename = "Run It Once Poker"
-                self.siteId   = 26
-            elif mg['SITE'] == 'BetOnline':
-                self.sitename = 'BetOnline'
-                self.siteId = 19
-            elif mg['SITE'] == 'PokerBros':
-                self.sitename = 'PokerBros'
-                self.siteId = 29
                 
         if 'TOURNO' in mg and mg['TOURNO'] is None:
             info['type'] = 'ring'
@@ -754,7 +736,7 @@ class PokerStars(HandHistoryConverter):
         #Bovada walks are calculated incorrectly in converted PokerStars hands
         acts, bovadaUncalled_v1, bovadaUncalled_v2, blindsantes, adjustment = hand.actions.get('PREFLOP'), False, False, 0, 0
         names = [p[1] for p in hand.players]
-        if "Big Blind" in names or "Small Blind" in names or "Dealer" in names or self.siteId == 26:
+        if "Big Blind" in names or "Small Blind" in names or "Dealer" in names:
             if acts != None and len([a for a in acts if a[1] != 'folds']) == 0:
                 m0 = self.re_Uncalled.search(hand.handText)
                 if m0 and float(m0.group('BET')) == float(hand.bb):

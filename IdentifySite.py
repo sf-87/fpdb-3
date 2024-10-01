@@ -28,23 +28,14 @@ from time import time
 from optparse import OptionParser
 import codecs
 
-import Database
-
 import Configuration
 import logging
-try:
-    import xlrd
-except:
-    xlrd = None
 # logging has been set up in fpdb.py or HUD_main.py, use their settings:
 log = logging.getLogger("parser")
 
 re_Divider, re_Head, re_XLS  = {}, {}, {}
 re_Divider['PokerStars'] = re.compile(r'^Hand #(\d+)\s*$', re.MULTILINE)
-re_Divider['Fulltilt'] = re.compile(r'\*{20}\s#\s\d+\s\*{15,25}\s?', re.MULTILINE)
-re_Head['Fulltilt'] = re.compile(r'^((BEGIN)?\n)?FullTiltPoker.+\n\nSeat', re.MULTILINE)
 re_XLS['PokerStars'] = re.compile(r'Tournaments\splayed\sby\s\'.+?\'')
-re_XLS['Fulltilt'] = re.compile(r'Player\sTournament\sReport\sfor\s.+?\s\(.*\)')
 
 class FPDBFile(object):
     path = ""
@@ -81,16 +72,14 @@ class Site(object):
             self.summary = None
         self.line_delimiter = self.getDelimiter(filter_name)
         self.line_addendum  = self.getAddendum(filter_name)
-        self.spaces  = filter_name == 'Entraction'
+        self.spaces  = False
         self.getHeroRegex(obj, filter_name)
         
     def getDelimiter(self, filter_name):
         line_delimiter =  None
         if filter_name == 'PokerStars':
             line_delimiter = '\n\n'
-        elif filter_name == 'Fulltilt' or filter_name == 'PokerTracker':
-            line_delimiter = '\n\n\n'
-        elif self.re_SplitHands.match('\n\n') and filter_name != 'Entraction':
+        elif self.re_SplitHands.match('\n\n'):
              line_delimiter = '\n\n'
         elif self.re_SplitHands.match('\n\n\n'):
             line_delimiter = '\n\n\n'
@@ -99,23 +88,13 @@ class Site(object):
             
     def getAddendum(self, filter_name):
         line_addendum = ''
-        if filter_name == 'OnGame':
-            line_addendum = '*'
-        elif filter_name == 'Merge':
-            line_addendum = '<'
-        elif filter_name == 'Entraction':
-            line_addendum = '\n\n'
             
         return line_addendum
     
     def getHeroRegex(self, obj, filter_name):
         self.re_HeroCards   = None
         if hasattr(obj, 're_HeroCards'):
-            if filter_name not in ('Bovada', 'Enet'):
-                self.re_HeroCards = obj.re_HeroCards
-        if filter_name == 'PokerTracker':
-            self.re_HeroCards1 = obj.re_HeroCards1
-            self.re_HeroCards2 = obj.re_HeroCards2 
+            self.re_HeroCards = obj.re_HeroCards
 
 class IdentifySite(object):
     def __init__(self, config, hhcs = None):
@@ -158,8 +137,6 @@ class IdentifySite(object):
                 self.sitelist[obj.siteId] = Site(site, filter, filter_name, summary, obj)
             except Exception as e:
                 log.error("Failed to load HH importer: %s.  %s" % (filter_name, e))
-        self.re_Identify_PT = getattr(__import__("PokerTrackerToFpdb"), "PokerTracker", None).re_Identify
-        self.re_SumIdentify_PT = getattr(__import__("PokerTrackerSummary"), "PokerTrackerSummary", None).re_Identify
 
     def walkDirectory(self, dir, sitelist):
         """Walks a directory, and executes a callback on each file"""
@@ -194,14 +171,6 @@ class IdentifySite(object):
                     self.filelist[path] = fobj
 
     def read_file(self, in_path):
-        if in_path.endswith('.xls') or in_path.endswith('.xlsx') and xlrd:
-            try:
-                wb = xlrd.open_workbook(in_path)
-                sh = wb.sheet_by_index(0)
-                header = str(sh.cell(0,0).value)
-                return header, 'utf-8'
-            except:
-                return None, None
         for kodec in self.codepage:
             try:
                 infile = codecs.open(in_path, 'r', kodec)
@@ -223,7 +192,7 @@ class IdentifySite(object):
         for id, site in list(self.sitelist.items()):
             filter_name = site.filter_name
             m = site.re_Identify.search(whole_file[:5000])
-            if m and filter_name in ('Fulltilt', 'PokerStars'):
+            if m and filter_name in ('PokerStars'):
                 m1 = re_Divider[filter_name].search(whole_file.replace('\r\n', '\n'))
                 if m1:
                     f.archive = True
@@ -246,7 +215,7 @@ class IdentifySite(object):
             if site.summary:
                 if path.endswith('.xls') or path.endswith('.xlsx'):
                     filter_name = site.filter_name
-                    if filter_name in ('Fulltilt', 'PokerStars'):
+                    if filter_name in ('PokerStars'):
                         m2 = re_XLS[filter_name].search(whole_file[:5000])
                         if m2:
                             f.site = site
@@ -258,38 +227,6 @@ class IdentifySite(object):
                         f.site = site
                         f.ftype = "summary"
                         return f
-                
-        m1 = self.re_Identify_PT.search(whole_file[:5000])
-        m2 = self.re_SumIdentify_PT.search(whole_file[:100])
-        if m1 or m2:
-            filter = 'PokerTrackerToFpdb'
-            filter_name = 'PokerTracker'
-            mod = __import__(filter)
-            obj = getattr(mod, filter_name, None)
-            summary = 'PokerTrackerSummary'
-            f.site = Site('PokerTracker', filter, filter_name, summary, obj)
-            if m1:
-                f.ftype = "hh"
-                if re.search(u'\*{2}\sGame\sID\s', m1.group()):
-                    f.site.line_delimiter = None
-                    f.site.re_SplitHands = re.compile(u'End\sof\sgame\s\d+')
-                elif re.search(u'\*{2}\sHand\s\#\s', m1.group()):
-                    f.site.line_delimiter = None
-                    f.site.re_SplitHands = re.compile(u'Rake:\s[^\s]+')
-                elif re.search(u'Server\spoker\d+\.ipoker\.com', whole_file[:250]):
-                    f.site.line_delimiter = None
-                    f.site.spaces = True
-                    f.site.re_SplitHands = re.compile(u'GAME\s\#')
-                m3 = f.site.re_HeroCards1.search(whole_file[:5000])
-                if m3:
-                    f.hero = m3.group('PNAME')
-                else:
-                     m4 = f.site.re_HeroCards2.search(whole_file[:5000])
-                     if m4:
-                         f.hero = m4.group('PNAME')
-            else:
-                f.ftype = "summary"
-            return f
         
         return False
 

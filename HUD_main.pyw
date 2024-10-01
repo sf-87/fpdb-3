@@ -15,10 +15,10 @@ import sys
 import os
 import time
 import logging
-from PyQt5.QtCore import (QCoreApplication, QMetaObject, QObject, Qt,
+from PyQt5.QtCore import (QCoreApplication, QObject, Qt,
                           QThread, pyqtSignal, QMutex)
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import (QApplication, QLabel, QMainWindow,
+from PyQt5.QtWidgets import (QApplication, QLabel,
                              QVBoxLayout, QWidget)
 from qt_material import apply_stylesheet
 
@@ -35,13 +35,7 @@ Configuration.set_logfile(u"HUD-log.txt")
 c = Configuration.Config(file=options.config, dbname=options.dbname)
 log = logging.getLogger("hud")
 
-# get the correct module for the current os
-if c.os_family == 'Linux':
-    import XTables as Tables
-elif c.os_family == 'Mac':
-    import OSXTables as Tables
-elif c.os_family in ('XP', 'Win7'):
-    import WinTables as Tables
+import WinTables as Tables
 
 class Reader(QObject):
     handRead = pyqtSignal(str)

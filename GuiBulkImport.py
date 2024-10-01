@@ -25,20 +25,14 @@ from L10n import set_locale_translation
 import os
 import sys
 from time import time
-from optparse import OptionParser
-import traceback
 
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton, QFileDialog
 
 #    fpdb/FreePokerTools modules
 
-import Options
-
 import Importer
 
 import Configuration
-
-import Exceptions
 
 import logging
 if __name__ == "__main__":

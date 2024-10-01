@@ -105,16 +105,7 @@ class Table(Table_Window):
             WindowStyle = GetWindowLong(hwnd, GWL_EXSTYLE)
             log.debug(f"after GetWindowLong {hwnd}")
 
-            if window_info.titles[hwnd].split(' ', 1)[0] == "Winamax":
-                self.search_string = self.search_string.split(' ', 3)[0]
-
-                if re.search(self.search_string, window_info.titles[hwnd], re.I):
-                    if self.check_bad_words(window_info.titles[hwnd]):
-                        continue
-                    self.number = hwnd
-                    self.title = window_info.titles[hwnd]
-                    break
-            elif re.search(self.search_string, window_info.titles[hwnd], re.I):
+            if re.search(self.search_string, window_info.titles[hwnd], re.I):
                 log.debug(f"hwnd {hwnd} found something")
                 if self.check_bad_words(window_info.titles[hwnd]):
                     log.debug(f"hwnd {hwnd} has bad words")

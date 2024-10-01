@@ -4,28 +4,24 @@
 from __future__ import print_function
 from __future__ import division
 import itertools
-from ast import Pass
 
-from dataclasses import replace
 from past.utils import old_div
 import pathlib
 import os
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import QDate, QDateTime
-from PyQt5.QtWidgets import (QCalendarWidget, QCheckBox, QCompleter,
+from PyQt5.QtWidgets import (QCalendarWidget, QCheckBox,
                              QDateEdit, QDialog, QGridLayout,
                              QGroupBox, QHBoxLayout, QLabel,
                              QLineEdit, QPushButton, QRadioButton,
                              QSpinBox, QVBoxLayout, QWidget, QComboBox)
 
-from time import gmtime, mktime, strftime, strptime
 from functools import partial
 import logging
 
 import Configuration
 import Database
 import SQL
-import Charset
 import Card
 
 if __name__ == "__main__":
@@ -464,46 +460,6 @@ class Filters(QWidget):
             icon_file = ""
             if site == "PokerStars":
                 icon_file = 'ps.svg'
-            elif site == "Full Tilt Poker":
-                icon_file = 'ft.svg'
-            elif site == "Everleaf":
-                icon_file = 'everleaf.png'
-            elif site == "Boss":
-                icon_file = 'boss.ico'
-            elif site == "PartyPoker":
-                icon_file = 'party.png'
-            elif site == "Merge":
-                icon_file = 'merge.png'
-            elif site == "PKR":
-                icon_file = 'pkr.png'
-            elif site == "iPoker":
-                icon_file = 'ipoker.png'
-            elif site == "Cake":
-                icon_file = 'cake.png'
-            elif site == "Entraction":
-                icon_file = 'entraction.png'
-            elif site == "BetOnline":
-                icon_file = 'betonline.png'
-            elif site == "Microgaming":
-                icon_file = 'microgaming.png'
-            elif site == "Bovada":
-                icon_file = 'bovada.png'
-            elif site == "Enet":
-                icon_file = 'enet.png'
-            elif site == "SealsWithClubs":
-                icon_file = 'swc.png'
-            elif site == "WinningPoker":
-                icon_file = 'winning.png'
-            elif site == "GGPoker":
-                icon_file = 'gg.png'
-            elif site == "Pacific":
-                icon_file = 'pacific.png'
-            elif site == "KingsClub":
-                icon_file = 'kingsclub.png'
-            elif site == "Unibet":
-                icon_file = 'unibet.png'
-            elif site == "Winamax":
-                icon_file = 'wina.svg'
             else:
                 icon_file = ''
 

@@ -143,10 +143,6 @@ FPDB3
 ```Python
 python fpdb.pyw
 ```
-FPDB3 web
-```Python
-python start_fpdb_web.py 
-```
 
 
 ## Bugs tracking

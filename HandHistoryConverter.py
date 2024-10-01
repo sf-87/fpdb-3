@@ -25,15 +25,11 @@ from past.utils import old_div
 
 import re
 import sys
-import traceback
-from optparse import OptionParser
 import os
 import os.path
 import xml.dom.minidom
 import codecs
-from decimal_wrapper import Decimal
-import operator
-from xml.dom.minidom import Node
+from decimal import Decimal
 
 import time
 import datetime
@@ -48,7 +44,6 @@ log = logging.getLogger("parser")
 
 import Hand
 from Exceptions import *
-import Configuration
 
 class HandHistoryConverter(object):
 
@@ -571,7 +566,6 @@ or None if we fail to get the info """
     def changeTimezone(time, givenTimezone, wantedTimezone):
         """Takes a givenTimezone in format AAA or AAA+HHMM where AAA is a standard timezone
            and +HHMM is an optional offset (+/-) in hours (HH) and minutes (MM)
-           (See OnGameToFpdb.py for example use of the +HHMM part)
            Tries to convert the time parameter (with no timezone) from the givenTimezone to 
            the wantedTimeZone (currently only allows "UTC")
         """
