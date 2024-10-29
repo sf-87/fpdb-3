@@ -33,7 +33,7 @@ from PyQt5.QtWidgets import QWidget, QLabel
 from PyQt5.QtWidgets import QAction, QApplication, QLabel, QMainWindow, QMessageBox, QTabWidget, QVBoxLayout, QWidget
 
 import interlocks
-from Exceptions import *
+from Exceptions import FpdbError
 
 import GuiLogView
 import GuiBulkImport
@@ -89,16 +89,24 @@ class fpdb(QMainWindow):
     def dia_database_stats(self, widget, data=None):
         self.warning_box(
             string=f"Number of Hands: {self.db.getHandCount()}\nNumber of Tourneys: {self.db.getTourneyCount()}\nNumber of TourneyTypes: {self.db.getTourneyTypeCount()}",
-            diatitle="Database Statistics")
+            diatitle="Database Statistics"
+        )
 
     def dia_recreate_tables(self, widget, data=None):
         """Dialogue that asks user to confirm that he wants to delete and recreate the tables"""
         if self.obtain_global_lock("fpdb.dia_recreate_tables"):  # returns true if successful
-            dia_confirm = QMessageBox(QMessageBox.Warning, "Wipe DB", "Confirm deleting and recreating tables",
-                                      QMessageBox.Yes | QMessageBox.No, self)
-            diastring = f"Please confirm that you want to (re-)create the tables. If there already are tables in" \
-                        f" the database {self.db.database} on {self.db.host}" \
-                        f" they will be deleted and you will have to re-import your histories.\nThis may take a while."
+            dia_confirm = QMessageBox(
+                QMessageBox.Warning,
+                "Wipe DB",
+                "Confirm deleting and recreating tables",
+                QMessageBox.Yes | QMessageBox.No,
+                self
+            )
+            diastring = (
+                f"Please confirm that you want to (re-)create the tables. If there already are tables in"
+                f" the database {self.db.database} on {self.db.host}"
+                f" they will be deleted and you will have to re-import your histories.\nThis may take a while."
+            )
 
             dia_confirm.setInformativeText(diastring)  # todo: make above string with bold for db, host and deleted
             response = dia_confirm.exec_()
@@ -112,10 +120,12 @@ class fpdb(QMainWindow):
                 self.release_global_lock()
             else:
                 self.release_global_lock()
-                log.info('User cancelled recreating tables')
+                log.info("User cancelled recreating tables")
         else:
-            self.warning_box("Cannot open Database Maintenance window because other"
-                             " windows have been opened. Re-start fpdb to use this option.")
+            self.warning_box(
+                "Cannot open Database Maintenance window because other"
+                " windows have been opened. Re-start fpdb to use this option."
+            )
 
     def dia_logs(self, widget, data=None):
         """opens the log viewer window"""
@@ -124,7 +134,7 @@ class fpdb(QMainWindow):
 
         viewer = None
         for i, t in enumerate(self.threads):
-            if str(t.__class__) == 'GuiLogView.GuiLogView':
+            if str(t.__class__) == "GuiLogView.GuiLogView":
                 viewer = t
                 break
 
@@ -181,20 +191,27 @@ class fpdb(QMainWindow):
 
 
     def load_profile(self, create_db=False):
-        """Loads profile from the provided path name."""
+        """Loads profile from the provided path name.
+        Set:
+           - self.settings
+           - self.config
+           - self.db
+        """
         self.config = Configuration.Config(file=options.config, dbname=options.dbname)
         if self.config.file_error:
-            self.warning_box(f"There is an error in your config file"
-                             f" {self.config.file}:\n{str(self.config.file_error)}", diatitle="CONFIG FILE ERROR")
+            self.warning_box(
+                f"There is an error in your config file" f" {self.config.file}:\n{str(self.config.file_error)}",
+                diatitle="CONFIG FILE ERROR",
+            )
             sys.exit()
 
         log.info(f"Logfile is {os.path.join(self.config.dir_log, self.config.log_file)}")
 
         self.settings = {}
-        self.settings['global_lock'] = self.lock
-        self.settings['os'] = "windows"
+        self.settings["global_lock"] = self.lock
+        self.settings["os"] = "windows"
 
-        self.settings.update({'cl_options': cl_options})
+        self.settings.update({"cl_options": cl_options})
         self.settings.update(self.config.get_db_parameters())
         self.settings.update(self.config.get_import_parameters())
         self.settings.update(self.config.get_default_paths())
@@ -202,7 +219,7 @@ class fpdb(QMainWindow):
         if self.db is not None and self.db.is_connected():
             self.db.disconnect()
 
-        self.sql = SQL.Sql(db_server=self.settings['db-server'])
+        self.sql = SQL.Sql(db_server=self.settings["db-server"])
         err_msg = None
         self.db = Database.Database(self.config, sql=self.sql)
         log.info(f"Connected to SQLite: {self.db.db_path}")
@@ -213,13 +230,17 @@ class fpdb(QMainWindow):
             self.db = None
 
         if self.db is not None and self.db.wrongDbVersion:
-            diaDbVersionWarning = QMessageBox(QMessageBox.Warning, "Strong Warning - Invalid database version",
-                                              "An invalid DB version or missing tables have been detected.",
-                                              QMessageBox.Ok, self)
+            diaDbVersionWarning = QMessageBox(
+                QMessageBox.Warning,
+                "Strong Warning - Invalid database version",
+                "An invalid DB version or missing tables have been detected.",
+                QMessageBox.Ok,
+                self
+            )
             diaDbVersionWarning.setInformativeText(
-                f"This error is not necessarily fatal but it is strongly"
-                f" recommended that you recreate the tables by using the Database menu."
-                f"Not doing this will likely lead to misbehaviour including fpdb crashes, corrupt data etc."
+                "This error is not necessarily fatal but it is strongly"
+                " recommended that you recreate the tables by using the Database menu."
+                "Not doing this will likely lead to misbehaviour including fpdb crashes, corrupt data etc."
             )
 
             diaDbVersionWarning.exec_()
@@ -232,7 +253,7 @@ class fpdb(QMainWindow):
         # If the db-version is out of date, don't validate the config
         # otherwise the end user gets bombarded with false messages
         # about every site not existing
-        if hasattr(self.db, 'wrongDbVersion'):
+        if hasattr(self.db, "wrongDbVersion"):
             if not self.db.wrongDbVersion:
                 self.validate_config()
 
@@ -274,20 +295,24 @@ class fpdb(QMainWindow):
 
     def tab_main_help(self, widget, data=None):
         """Displays a tab with the main fpdb help screen"""
-        mh_tab = QLabel(("""
+        mh_tab = QLabel(
+            (
+                """
                         Welcome to Fpdb!
-                        
+
                         This program is currently in an alpha-state, so our database format is still sometimes changed.
                         You should therefore always keep your hand history files so that you can re-import
                         after an update, if necessary.
-                        
+
                         all configuration now happens in HUD_config.xml.
-                        
+
                         This program is free/libre open source software licensed partially under the AGPL3,
                         and partially under GPL2 or later.
                         The Windows installer package includes code licensed under the MIT license.
                         You can find the full license texts in agpl-3.0.txt, gpl-2.0.txt, gpl-3.0.txt
-                        and mit.txt in the fpdb installation directory."""))
+                        and mit.txt in the fpdb installation directory."""
+            )
+        )
         self.add_and_display_tab(mh_tab, "Help")
 
     def get_theme_colors(self):
@@ -310,16 +335,12 @@ class fpdb(QMainWindow):
             "background": self.palette().color(QPalette.Window).name(),
             "foreground": self.palette().color(QPalette.WindowText).name(),
             "grid": "#444444",  # to customize
-            "line_showdown": "#0000FF",
-            "line_nonshowdown": "#FF0000",
-            "line_ev": "#FFA500",
-            "line_hands": "#00FF00",
-            'line_up': 'g',
-            'line_down': 'r',
-            'line_showdown': 'b',
-            'line_nonshowdown': 'm',
-            'line_ev': 'orange',
-            'line_hands': 'c'
+            "line_up": "g",
+            "line_down": "r",
+            "line_showdown": "b",
+            "line_nonshowdown": "m",
+            "line_ev": "orange",
+            "line_hands": "c"
         }
 
     def tabTourneyGraphViewer(self, widget, data=None):
@@ -334,7 +355,7 @@ class fpdb(QMainWindow):
         for site in self.config.supported_sites:  # get site names from config file
             try:
                 self.config.get_site_id(site)  # and check against list from db
-            except KeyError as exc:
+            except KeyError:
                 log.warning(f"site {site} missing from db")
                 dia = QMessageBox()
                 dia.setIcon(QMessageBox.Warning)
@@ -353,17 +374,17 @@ class fpdb(QMainWindow):
         item = self.nb.widget(index)
         self.nb.removeTab(index)
         self.nb_tab_names.pop(index)
-        
+
         try:
             self.threads.remove(item)
         except ValueError:
             pass
-        
+
         item.deleteLater()
 
     def __init__(self):
         super().__init__()
-        cards = os.path.join(Configuration.GRAPHICS_PATH, 'tribal.jpg')
+        cards = os.path.join(Configuration.GRAPHICS_PATH, "tribal.jpg")
         if os.path.exists(cards):
             self.setWindowIcon(QIcon(cards))
         set_locale_translation()
@@ -404,9 +425,9 @@ class fpdb(QMainWindow):
 
         self.load_profile(create_db=True)
 
-        fileName = os.path.join(self.config.dir_log, 'fpdb-errors.txt')
+        fileName = os.path.join(self.config.dir_log, "fpdb-errors.txt")
         log.info(f"Note: error output is being diverted to {self.config.dir_log}. Any major error will be reported there _only_.")
-        errorFile = codecs.open(fileName, 'w', 'utf-8')
+        errorFile = codecs.open(fileName, "w", "utf-8")
         sys.stderr = errorFile
 
         sys.stderr.write("fpdb starting ...")
@@ -414,6 +435,6 @@ class fpdb(QMainWindow):
 if __name__ == "__main__":
     from qt_material import apply_stylesheet
     app = QApplication([])
-    apply_stylesheet(app, theme='dark_purple.xml')
+    apply_stylesheet(app, theme="dark_purple.xml")
     me = fpdb()
     app.exec_()
