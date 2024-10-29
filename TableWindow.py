@@ -1,233 +1,87 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-"""Base class for interacting with poker client windows.
-
-There are currently subclasses for X, OSX, and Windows.
-
-The class queries the poker client window for data of interest, such as
-size and location. It also controls the signals to alert the HUD when the
-client has been resized, destroyed, etc.
-"""
-#    Copyright 2008 - 2011, Ray E. Barker
-
-#    This program is free software; you can redistribute it and/or modify
-#    it under the terms of the GNU General Public License as published by
-#    the Free Software Foundation; either version 2 of the License, or
-#    (at your option) any later version.
-#
-#    This program is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-#    GNU General Public License for more details.
-#
-#    You should have received a copy of the GNU General Public License
-#    along with this program; if not, write to the Free Software
-#    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-
-########################################################################
-
-
-# import L10n
-# _ = L10n.get_translation()
-
-#    Standard Library modules
-import re
+import ctypes
+from ctypes import wintypes
 import logging
-from time import sleep
+import re
 
-#    FreePokerTools modules
-import Configuration
-from HandHistoryConverter import getTableTitleRe
-from HandHistoryConverter import getTableNoRe
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QWindow
 
-c = Configuration.Config()
+# logging has been set up in fpdb.py or HUD_main.py, use their settings:
 log = logging.getLogger("hud")
 
-#    Global used for figuring out the current game being played from the title.
-#    The dict key is a tuple of (limit type, category) for the game.
-#    The list is the names for those games used by the supported poker sites
-#    This is currently only used for mixed games, so it only needs to support those
-#    games on PokerStars and Full Tilt.
-nlpl_game_names = {  # fpdb name      Stars Name   FTP Name (if different)
-    ("nl", "holdem"): ("No Limit Hold'em",),
-    ("pl", "holdem"): ("Pot Limit Hold'em",),
-    ("pl", "omahahi"): ("Pot Limit Omaha", "Pot Limit Omaha Hi"),
-}
-limit_game_names = {  # fpdb name      Stars Name   FTP Name
-    ("fl", "holdem"): ("Limit Hold'em",),
-    ("fl", "omahahilo"): ("Limit Omaha H/L",),
-    ("fl", "studhilo"): ("Limit Stud H/L",),
-    ("fl", "razz"): ("Limit Razz",),
-    ("fl", "studhi"): ("Limit Stud", "Stud Hi"),
-    ("fl", "27_3draw"): ("Limit Triple Draw 2-7 Lowball",),
-}
+# Definition of Windows API constants
+SM_CXSIZEFRAME = 32
+SM_CYCAPTION = 4
 
-#    A window title might have our table name + one of these words/
-#    phrases. If it has this word in the title, it is not a table.
-bad_words = ("History for table:", "HUD:", "Chat:", "FPDBHUD", "Lobby")
+# Windows functions via ctypes
+EnumWindows = ctypes.windll.user32.EnumWindows
+EnumWindowsProc = ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
+GetWindowText = ctypes.windll.user32.GetWindowTextW
+GetWindowTextLength = ctypes.windll.user32.GetWindowTextLengthW
+GetWindowRect = ctypes.windll.user32.GetWindowRect
+GetSystemMetrics = ctypes.windll.user32.GetSystemMetrics
+IsWindow = ctypes.windll.user32.IsWindow
 
-#    Each TableWindow object must have the following attributes correctly populated:
-#    tw.name = the table name from the title bar, which must to match the table name
-#              from the corresponding hand record in the db.
-#    tw.number = This is the system id number for the client table window in the
-#                format that the system presents it.  This is Xid in Xwindows and
-#                hwnd in Microsoft Windows.
-#    tw.title = The full title from the window title bar.
-#    tw.width, tw.height = The width and height of the window in pixels.  This is
-#            the internal width and height, not including the title bar and
-#            window borders.
-#    tw.x, tw.y = The x, y (horizontal, vertical) location of the window relative
-#            to the top left of the display screen.  This also does not include the
-#            title bar and window borders.  To put it another way, this is the
-#            screen location of (0, 0) in the working window.
-#    tournament = Tournament number for a tournament or None for a cash game.
-#    table = Table number for a tournament.
-#    gdkhandle =
-#    window =
-#    parent =
-#    game =
-#    search_string =
+# Class for temporarily storing securities
+class WindowInfoTemp:
+    def __init__(self):
+        self.titles = {}
 
+# Function for listing windows and retrieving titles
+def win_enum_handler(hwnd, lParam):
+    window_info = ctypes.cast(lParam, ctypes.py_object).value
+    length = GetWindowTextLength(hwnd)
 
-class Table_Window(object):
-    def __init__(self, config, site, table_name=None, tournament=None, table_number=None):
-        self.config = config
-        self.site = site
+    if length > 0:
+        buff = ctypes.create_unicode_buffer(length + 1)
+        GetWindowText(hwnd, buff, length + 1)
+
+        if "Tournament" in buff.value:
+            window_info.titles[hwnd] = buff.value
+
+    return True
+
+class TableWindow(object):
+    def __init__(self, table_name, max_seats, tourney_no):
+        self.table_name = table_name
+        self.max_seats = max_seats
+        self.table_no = re.split(" ", table_name)[3]
+        self.re_table_no = f"{tourney_no}\sTable\s(\d+)"
+        self.width = 0
+        self.height = 0
+        self.x = 0
+        self.y = 0
         self.hud = None  # fill in later
-        self.gdkhandle = None
+        self.gdk_handle = None
         self.number = None
-        # check if 
-        if isinstance(table_name, bytes):
-            print(f"Décodage de table_name en UTF-8 : {table_name}")
-            table_name = table_name.decode('utf-8')
-        if isinstance(tournament, bytes):
-            print(f"Décodage de table_name en UTF-8 : {tournament}")
-            tournament = tournament.decode('utf-8')
-        if isinstance(table_number, bytes):
-            print(f"Décodage de table_name en UTF-8 : {table_number}")
-            table_number = table_number.decode('utf-8')
-
-        if tournament is not None and table_number is not None:
-            print(tournament)
-            self.tournament = int(tournament)
-            print(" tournement:")
-            print(self.tournament)
-            print("table_number:")
-            print(type(table_number))
-            print(table_number)
-
-            print("table_number error:")
-            print(type(table_number))
-            print(table_number)
-            self.table = int(table_number)
-            print(self.table)
-            self.name = "%s - %s" % (self.tournament, self.table)
-            self.type = "tour"
-            table_kwargs = dict(tournament=self.tournament, table_number=self.table)
-            self.tableno_re = getTableNoRe(self.config, self.site, tournament=self.tournament)
-        elif table_name is not None:
-            print("table_number cash:")
-            print(type(table_name))
-            print((table_name))
-            self.name = table_name
-            self.type = "cash"
-            self.tournament = None
-            table_kwargs = dict(table_name=table_name)
-            print("table_kwarg cash:")
-            print(type(table_kwargs))
-            print((table_kwargs))
-        else:
-            return None
-
-        self.search_string = getTableTitleRe(self.config, self.site, self.type, **table_kwargs)
-        log.debug(f"search string: {self.search_string}")
-        # make a small delay otherwise Xtables.root.get_windows()
-        #  returns empty for unknown reasons
-        sleep(0.1)
 
         self.find_table_parameters()
-        if not self.number:
-            log.error(('Can\'t find table "%s" with search string "%s"'), table_name, self.search_string)
+
+        if self.number is None:
+            return None
 
         geo = self.get_geometry()
+
         if geo is None:
             return None
+
         self.width = geo["width"]
         self.height = geo["height"]
         self.x = geo["x"]
-        print(self.x)
         self.y = geo["y"]
-        print(self.y)
-        self.oldx = self.x  # attn ray: remove these two lines and update Hud.py::update_table_position()
-        print(self.oldx)
-        self.oldy = self.y
-        print(self.oldy)
-        self.game = self.get_game()
-
-    def __str__(self):
-        likely_attrs = (
-            "number",
-            "title",
-            "site",
-            "width",
-            "height",
-            "x",
-            "y",
-            "tournament",
-            "table",
-            "gdkhandle",
-            "window",
-            "parent",
-            "key",
-            "hud",
-            "game",
-            "search_string",
-            "tableno_re",
-        )
-        temp = "TableWindow object\n"
-        for a in likely_attrs:
-            if getattr(self, a, 0):
-                temp += "    %s = %s\n" % (a, getattr(self, a))
-        return temp
-
-    ####################################################################
-    #    "get" methods. These query the table and return the info to get.
-    #    They don't change the data in the table and are generally used
-    #    by the "check" methods. Most of the get methods are in the
-    #    subclass because they are specific to X, Windows, etc.
-    def get_game(self):
-        #        title = self.get_window_title()
-        #        if title is None:
-        #            return False
-        title = self.title
-
-        #    check for nl and pl games first, to avoid bad matches
-        for game, names in list(nlpl_game_names.items()):
-            for name in names:
-                if name in title:
-                    return game
-        for game, names in list(limit_game_names.items()):
-            for name in names:
-                if name in title:
-                    return game
-        return False
 
     def get_table_no(self):
-        new_title = self.get_window_title()
-        log.debug(f"new table title: {new_title}")
-        if new_title is None:
-            return False
+        window_title = self.get_window_title()
 
-        try:
-            log.debug(f"before searching: {new_title}")
-            mo = re.search(self.tableno_re, new_title)
-        except AttributeError:  #'Table' object has no attribute 'tableno_re'
-            log.debug("'Table' object has no attribute 'tableno_re'")
-            return False
+        if window_title is None:
+            return 0
+
+        mo = re.search(self.re_table_no, window_title)
 
         if mo is not None:
-            return int(mo.group(1))
-        return False
+            return mo.group(1)
+
+        return 0
 
     ####################################################################
     #    check_table() is meant to be called by the hud periodically to
@@ -246,19 +100,20 @@ class Table_Window(object):
     #    return False, or the timeout will be cancelled.
     def check_size(self):
         new_geo = self.get_geometry()
+
         if new_geo is None:  # window destroyed
             return "client_destroyed"
 
-        elif self.width != new_geo["width"] or self.height != new_geo["height"]:  # window resized
-            self.oldwidth = self.width
+        if self.width != new_geo["width"] or self.height != new_geo["height"]:  # window resized
             self.width = new_geo["width"]
-            self.oldheight = self.height
             self.height = new_geo["height"]
             return "client_resized"
+
         return False  # no change
 
     def check_loc(self):
         new_geo = self.get_geometry()
+
         if new_geo is None:  # window destroyed
             return "client_destroyed"
 
@@ -266,23 +121,89 @@ class Table_Window(object):
             self.x = new_geo["x"]
             self.y = new_geo["y"]
             return "client_moved"
+
         return False  # no change
 
-    def has_table_title_changed(self, hud):
-        log.debug("before get_table_no()")
+    def has_table_title_changed(self):
         result = self.get_table_no()
-        log.debug(f"tb has change nb {result}")
-        if result is not False and result != self.table:
-            log.debug(f"compare result and self.table {result} {self.table}")
-            self.table = result
-            if hud is not None:
-                log.debug("return True")
-                return True
-        log.debug("return False")
+
+        if result != 0 and result != self.table_no:
+            self.table_no = result
+            return True
+
         return False
 
-    def check_bad_words(self, title):
-        for word in bad_words:
-            if word in title:
-                return True
-        return False
+    def find_table_parameters(self):
+        # Find a poker client window with the given table name
+        window_info = WindowInfoTemp()
+
+        try:
+            log.debug("Before EnumWindows")
+            EnumWindows(EnumWindowsProc(win_enum_handler), ctypes.py_object(window_info))
+            log.debug(f"After EnumWindows found {len(window_info.titles)} windows")
+        except Exception as e:
+            log.error(f"Error during EnumWindows: {e}")
+
+        for hwnd in window_info.titles:
+            log.debug(f"hwnd {hwnd}")
+
+            try:
+                title = window_info.titles[hwnd]
+
+                if re.search(self.table_name, title):
+                    self.number = hwnd
+                    self.title = title
+                    log.debug(f"Found table in hwnd {self.number} title {self.title}")
+                    break
+            except Exception as e:
+                log.error(f"Unexpected error for hwnd {hwnd}: {e}")
+
+        if self.number is None:
+            log.error(f"Window {self.table_name} not found.")
+
+    def get_geometry(self):
+        # Get the window geometry
+        try:
+            rect = ctypes.wintypes.RECT()
+
+            if IsWindow(self.number):
+                result = GetWindowRect(self.number, ctypes.byref(rect))
+
+                if result != 0:
+                    x, y = rect.left, rect.top
+                    width = rect.right - rect.left
+                    height = rect.bottom - rect.top
+                    b_width = GetSystemMetrics(SM_CXSIZEFRAME)
+                    tb_height = GetSystemMetrics(SM_CYCAPTION)
+
+                    return {
+                        "x": x + b_width,
+                        "y": y + tb_height + b_width,
+                        "height": height - 2 * b_width - tb_height,
+                        "width": width - 2 * b_width
+                    }
+                else:
+                    log.error(f"Failed to retrieve GetWindowRect for hwnd: {self.number}")
+                    return None
+            else:
+                log.error(f"The window {self.number} is not valid.")
+                return None
+        except Exception as e:
+            log.error(f"Error retrieving geometry: {e}")
+            return None
+
+    def get_window_title(self):
+        length = GetWindowTextLength(self.number)
+        buff = ctypes.create_unicode_buffer(length + 1)
+        GetWindowText(self.number, buff, length + 1)
+
+        return buff.value
+
+    def topify(self, window):
+        # Make the specified Qt window 'always on top' under Windows
+        if self.gdk_handle is None:
+            self.gdk_handle = QWindow.fromWinId(self.number)
+
+        q_window = window.windowHandle()
+        q_window.setTransientParent(self.gdk_handle)
+        #q_window.setFlags(Qt.Tool | Qt.FramelessWindowHint | Qt.WindowDoesNotAcceptFocus | Qt.WindowStaysOnTopHint)

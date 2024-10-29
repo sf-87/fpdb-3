@@ -21,56 +21,35 @@ $PYINSTALLER_OPTIONS = "--noconfirm --onedir --windowed --log-level=DEBUG"
 
 # List of all files
 $FILES = @(
-    "Aux_Base.py",
-    "Aux_Classic_Hud.py",
     "Aux_Hud.py",
-    "Card.py",
-    "Charset.py",
     "Configuration.py",
     "Database.py",
-    "Deck.py",
-    "dependencies.txt",
     "DerivedStats.py",
-    "DetectInstalledSites.py",
     "Exceptions.py",
     "Filters.py",
     "fpdb.pyw",
     "GuiAutoImport.py",
     "GuiBulkImport.py",
-    "GuiLogView.py",
     "GuiTourneyGraphViewer.py",
     "GuiTourneyPlayerStats.py",
     "Hand.py",
-    "HandHistory.py",
     "HandHistoryConverter.py",
     "Hud.py",
     "HUD_config.xml",
     "HUD_main.pyw",
-    "IdentifySite.py",
     "Importer.py",
     "interlocks.py",
-    "L10n.py",
     "logging.conf",
-    "Mucked.py",
-    "Options.py",
     "PokerStarsStructures.py",
     "PokerStarsSummary.py",
     "PokerStarsToFpdb.py",
-    "Popup.py",
-    "settings.json",
-    "SplitHandHistory.py",
     "SQL.py",
     "Stats.py",
-    "Summaries.py",
-    "TableWindow.py",
-    "TourneySummary.py",
-    "WinTables.py"
+    "TableWindow.py"
 )
 
 $FOLDERS = @(
-    "gfx",
-    "icons",
-    "locale"
+    "gfx"
 )
 
 # Function to generate the pyinstaller command
