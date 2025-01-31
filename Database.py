@@ -510,8 +510,7 @@ class Database(object):
 
     def get_tourney_player_detailed_stats(self, start_date, end_date):
         self.cursor.execute(self.sql.query["getTourneyDetailedStats"], [start_date, end_date])
-        result = self.cursor.fetchall()
-        return ([desc[0] for desc in self.cursor.description], result)
+        return self.cursor.fetchall()
 
     def get_buy_ins(self):
         self.cursor.execute(self.sql.query["getBuyIns"])

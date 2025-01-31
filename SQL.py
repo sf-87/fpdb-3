@@ -523,35 +523,33 @@ class Sql(object):
         # Queries for Tourney Stats
         ####################################
 
-        self.query["getTourneyDetailedStats"] = """SELECT 'PokerStars'                                                                      AS siteName,
-                                                          tt.currency                                                                       AS currency,
-                                                          tt.buyIn                                                                          AS buyIn,
-                                                          tt.fee                                                                            AS fee,
-                                                          'holdem'                                                                          AS category,
-                                                          'nl'                                                                              AS limitType,
-                                                          tt.speed                                                                          AS speed,
-                                                          tt.maxSeats                                                                       AS maxSeats,
-					                               	      tt.knockout                                                                       AS knockout,
-					                               	      0                                                                                 AS reEntry,
-                                                          'SamFio87'                                                                        AS playerName,
-                                                          COUNT(1)                                                                          AS tourneyCount,
-                                                          SUM(CASE WHEN t.rank > 0 THEN 0 ELSE 1 END)                                       AS unknownRank,
-                                                          (CAST(SUM(CASE WHEN t.winnings > 0 THEN 1 ELSE 0 END) AS REAL) / COUNT(1)) * 100  AS itm,
-                                                          SUM(CASE WHEN t.rank = 1 THEN 1 ELSE 0 END)                                       AS _1st,
-                                                          SUM(CASE WHEN t.rank = 2 THEN 1 ELSE 0 END)                                       AS _2nd,
-                                                          SUM(CASE WHEN t.rank = 3 THEN 1 ELSE 0 END)                                       AS _3rd,
-                                                          SUM(t.winnings + t.bounties)                                                      AS won,
-                                                          SUM(tt.buyIn + tt.fee)                                                            AS spent,
-                                                          SUM(t.winnings + t.bounties - tt.buyIn - tt.fee)	 						        AS net,
-                                                          (SUM(t.winnings + t.bounties - tt.buyIn - tt.fee) / SUM(tt.buyIn + tt.fee)) * 100 AS roi,
-                                                          SUM(t.winnings + t.bounties - tt.buyIn - tt.fee) / COUNT(1)                       AS profitPerTourney
+        self.query["getTourneyDetailedStats"] = """SELECT printf("%.2f", tt.buyIn)                                                                          AS buyIn,
+                                                          printf("%.2f", tt.fee)                                                                            AS fee,
+                                                          printf("%d", tt.maxSeats)                                                                         AS maxSeats,
+					                               	      IIF(tt.sng = 1, 'Yes', 'No')                                                                      AS sng,
+					                               	      IIF(tt.knockout = 1, 'Yes', 'No')                                                                 AS knockout,
+                                                          tt.speed                                                                                          AS speed,
+                                                          printf("%d", COUNT(1))                                                                            AS tourneyCount,
+                                                          printf("%.2f", (CAST(SUM(CASE WHEN t.winnings > 0 THEN 1 ELSE 0 END) AS REAL) / COUNT(1)) * 100)  AS itm,
+                                                          printf("%d", SUM(CASE WHEN t.rank = 1 THEN 1 ELSE 0 END))                                         AS first,
+                                                          printf("%d", SUM(CASE WHEN t.rank = 2 THEN 1 ELSE 0 END))                                         AS second,
+                                                          printf("%d", SUM(CASE WHEN t.rank = 3 THEN 1 ELSE 0 END))                                         AS third,
+                                                          printf("%d", SUM(CASE WHEN t.rank = 4 THEN 1 ELSE 0 END))                                         AS fourth,
+                                                          printf("%d", SUM(CASE WHEN t.rank = 5 THEN 1 ELSE 0 END))                                         AS fifth,
+                                                          printf("%d", SUM(CASE WHEN t.rank = 6 THEN 1 ELSE 0 END))                                         AS sixth,
+                                                          printf("%d", SUM(CASE WHEN t.rank > 0 THEN 0 ELSE 1 END))                                         AS unknown,
+                                                          printf("%.2f", SUM(tt.buyIn + tt.fee))                                                            AS spent,
+                                                          printf("%.2f", SUM(t.winnings + t.bounties))                                                      AS won,
+                                                          printf("%.2f", SUM(t.winnings + t.bounties - tt.buyIn - tt.fee))	 						        AS net,
+														  printf("%.2f", (SUM(t.winnings + t.bounties - tt.buyIn - tt.fee) / SUM(tt.buyIn + tt.fee)) * 100) AS roi,
+														  printf("%.2f", SUM(t.winnings + t.bounties - tt.buyIn - tt.fee) / COUNT(1))                       AS profitPerTourney
                                                    FROM Tourneys t
                                                    INNER JOIN TourneyTypes tt
                                                    ON tt.Id = t.tourneyTypeId
                                                    WHERE t.startTime > ?
                                                    AND t.startTime < ?
                                                    GROUP BY t.tourneyTypeId
-                                                   ORDER BY t.tourneyTypeId"""
+                                                   ORDER BY tt.sng DESC, tt.buyIn, tt.fee, tt.maxSeats, tt.knockout"""
 
         self.query["getTourneyGraphStats"] = """SELECT t.winnings + t.bounties - tt.buyIn - tt.fee
                                                 FROM Tourneys t
