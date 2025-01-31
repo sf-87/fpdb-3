@@ -1,6 +1,7 @@
 cachetools ==5.5.0
 matplotlib ==3.10.0
 PyQt5      ==5.15.11
+pyinstaller==6.9.0
 pywin32    ==308
 pyzmq      ==26.2.0
 qt-material==2.14
