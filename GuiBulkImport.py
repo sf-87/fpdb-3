@@ -1,158 +1,54 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-# Copyright 2008-2011 Steffen Schaumburg
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, version 3 of the License.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program. If not, see <http://www.gnu.org/licenses/>.
-# In the "official" distribution you can find the license in agpl-3.0.txt.
-
-from __future__ import print_function
-from __future__ import division
-from past.utils import old_div
-
-# import L10n
-# _ = L10n.get_translation()
-#    Standard Library modules
-import os
-import sys
-from time import time
-
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton, QFileDialog
-
-#    fpdb/FreePokerTools modules
-
+import logging
 
 import Importer
 
-import Configuration
+from PyQt5.QtWidgets import QFileDialog, QHBoxLayout, QLineEdit, QPushButton, QVBoxLayout, QWidget
 
-
-import logging
-
-if __name__ == "__main__":
-    Configuration.set_logfile("fpdb-log.txt")
 # logging has been set up in fpdb.py or HUD_main.py, use their settings:
 log = logging.getLogger("importer")
 
-
 class GuiBulkImport(QWidget):
-    # CONFIGURATION  -  update these as preferred:
-    allowThreads = False  # set to True to try out the threads field
+    def __init__(self, global_lock, db, config, parent):
+        super().__init__(parent)
+        self.global_lock = global_lock
+        self.db = db
+        self.importer = Importer.Importer(db, self)
+        self.import_dir = QLineEdit(config.site.hh_path)
+
+        import_box = QVBoxLayout()
+        browse_box = QHBoxLayout()
+        browse_box.addWidget(self.import_dir)
+        choose_button = QPushButton("Browse...")
+        choose_button.clicked.connect(self.browse_clicked)
+        browse_box.addWidget(choose_button)
+        import_box.addLayout(browse_box)
+        load_button = QPushButton(("Bulk Import"))
+        load_button.clicked.connect(self.load_clicked)
+        import_box.addWidget(load_button)
+
+        self.setLayout(import_box)
 
     def load_clicked(self):
-        stored = None
-        dups = None
-        partial = None
-        skipped = None
-        errs = None
-        ttime = None
-        # Does the lock acquisition need to be more sophisticated for multiple dirs?
-        # (see comment above about what to do if pipe already open)
-        if self.settings["global_lock"].acquire(
-            wait=False, source="GuiBulkImport"
-        ):  # returns false immediately if lock not acquired
-            # try:
-            #    get the dir to import from the chooser
-            selected = self.importDir.text()
+        stored, duplicates, errors = 0, 0, 0
 
-            #    get the import settings from the gui and save in the importer
+        if self.global_lock.acquire("GuiBulkImport"):
+            # get the dir to import from the chooser
+            selected = self.import_dir.text()
 
-            self.importer.setHandsInDB(self.n_hands_in_db)
-            self.importer.setMode("bulk")
+            self.importer.add_bulk_import_dir(selected)
 
-            self.importer.addBulkImportImportFileOrDir(selected, site="auto")
-            self.importer.setCallHud(False)
+            stored, duplicates, errors = self.importer.run_import()
 
-            starttime = time()
+            log.info(f"Bulk import done: Stored: {stored}, Duplicates: {duplicates}, Errors: {errors}")
 
-            (stored, dups, partial, skipped, errs, ttime) = self.importer.runImport()
+            self.importer.clear_file_list()
 
-            ttime = time() - starttime
-            if ttime == 0:
-                ttime = 1
-
-            completionMessage = (
-                "Bulk import done: Stored: %d, Duplicates: %d, Partial: %d, Skipped: %d, Errors: %d, Time: %s seconds, Stored/second: %.0f"
-            ) % (stored, dups, partial, skipped, errs, ttime, old_div((stored + 0.0), ttime))
-            print(completionMessage)
-            log.info(completionMessage)
-
-            self.importer.clearFileList()
-
-            self.settings["global_lock"].release()
+            self.global_lock.release()
         else:
-            print(("bulk import aborted - global lock not available"))
+            log.error("Bulk import aborted - global lock not available")
 
-    def get_vbox(self):
-        """returns the vbox of this thread"""
-        return self.layout()
+    def browse_clicked(self):
+        new_dir = QFileDialog.getExistingDirectory(self, "Please choose the path that you want to Import", self.import_dir.text())
 
-    def __init__(self, settings, config, sql=None, parent=None):
-        QWidget.__init__(self, parent)
-        self.settings = settings
-        self.config = config
-
-        self.importer = Importer.Importer(self, self.settings, config, sql, self)
-
-        self.setLayout(QVBoxLayout())
-
-        self.importDir = QLineEdit(self.settings["bulkImport-defaultPath"])
-        hbox = QHBoxLayout()
-        hbox.addWidget(self.importDir)
-        self.chooseButton = QPushButton("Browse...")
-        self.chooseButton.clicked.connect(self.browseClicked)
-        hbox.addWidget(self.chooseButton)
-        self.layout().addLayout(hbox)
-
-        self.load_button = QPushButton(("Bulk Import"))
-        self.load_button.clicked.connect(self.load_clicked)
-        self.layout().addWidget(self.load_button)
-
-        #    see how many hands are in the db and adjust accordingly
-        tcursor = self.importer.database.cursor
-        tcursor.execute("Select count(1) from Hands")
-        row = tcursor.fetchone()
-        tcursor.close()
-        self.importer.database.rollback()
-        self.n_hands_in_db = row[0]
-
-    def browseClicked(self):
-        newdir = QFileDialog.getExistingDirectory(
-            self, caption=("Please choose the path that you want to Auto Import"), directory=self.importDir.text()
-        )
-        if newdir:
-            self.importDir.setText(newdir)
-
-
-if __name__ == "__main__":
-    config = Configuration.Config()
-    settings = {}
-    if os.name == "nt":
-        settings["os"] = "windows"
-    else:
-        settings["os"] = "linuxmac"
-
-    settings.update(config.get_db_parameters())
-    settings.update(config.get_import_parameters())
-    settings.update(config.get_default_paths())
-    import interlocks
-
-    settings["global_lock"] = interlocks.InterProcessLock(name="fpdb_global_lock")
-    settings["cl_options"] = ".".join(sys.argv[1:])
-
-    # from PyQt5.QtWidgets import QApplication, QMainWindow
-    # app = QApplication(sys.argv)
-    # main_window = QMainWindow()
-    # main_window.setCentralWidget(GuiBulkImport(settings, config))
-    # main_window.show()
-    # main_window.resize(600, 100)
-    # app.exec_()
+        if new_dir:
+            self.import_dir.setText(new_dir)
