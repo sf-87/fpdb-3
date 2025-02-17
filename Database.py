@@ -500,7 +500,7 @@ class Database(object):
             self.cursor.execute(self.sql.query["insertTourney"], data)
             return self.get_last_insert_id()
 
-        return result[0]
+        return result
 
     def update_tourney(self, data):
         self.cursor.execute(self.sql.query["updateTourney"], data)
