@@ -135,7 +135,7 @@ class HUD_main(QObject):
         # Timer for periodically checking tables
         check_tables_timer = QTimer(self)
         check_tables_timer.timeout.connect(self.check_tables)
-        check_tables_timer.start(800)
+        check_tables_timer.start(1000)
 
         self.main_window.setLayout(self.layout)
         self.main_window.show()
@@ -155,39 +155,9 @@ class HUD_main(QObject):
         QCoreApplication.quit()
 
     def check_tables(self):
-        if len(self.hud_dict) == 0:
-            log.info("Waiting for hands")
-
         for hud in list(self.hud_dict.values()):
-            status = hud.table.check_table()
-
-            if status == "client_destroyed":
-                self.client_destroyed(hud)
-            elif status == "client_moved":
-                self.client_moved(hud)
-            elif status == "client_resized":
-                self.client_resized(hud)
-
-    def client_moved(self, hud):
-        log.debug("Client moved event")
-
-        try:
-            hud.aux_window.move_windows()
-        except Exception:
-            log.exception(f"Error moving HUD for table: {hud.table.title}.")
-
-    def client_resized(self, hud):
-        log.debug("Client resized event")
-
-        try:
-            hud.resize_windows()
-            hud.aux_window.resize_windows()
-        except Exception:
-            log.exception(f"Error resizing HUD for table: {hud.table.title}.")
-
-    def client_destroyed(self, hud):
-        log.debug("Client destroyed event")
-        self.kill_hud(hud.table_name)
+            if not hud.table.check_table():
+                self.kill_hud(hud.table_name)
 
     def table_is_stale(self, hud):
         log.debug("Moved to a new table, killing current HUD")
@@ -209,7 +179,7 @@ class HUD_main(QObject):
         log.debug(f"Creating HUD for table {table_name} and hand {hand_id}")
 
         try:
-            self.hud_dict[table_name] = Hud.Hud(table, table_name, max_seats, self.config, stat_dict, copy.deepcopy(self.hud_params))
+            self.hud_dict[table_name] = Hud.Hud(self, table, table_name, max_seats, self.config, stat_dict, copy.deepcopy(self.hud_params))
 
             table.hud = self.hud_dict[table_name]
 

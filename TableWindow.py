@@ -3,23 +3,16 @@ from ctypes import wintypes
 import logging
 import re
 
-from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QWindow
 
 # logging has been set up in fpdb.py or HUD_main.py, use their settings:
 log = logging.getLogger("hud")
-
-# Definition of Windows API constants
-SM_CXSIZEFRAME = 32
-SM_CYCAPTION = 4
 
 # Windows functions via ctypes
 EnumWindows = ctypes.windll.user32.EnumWindows
 EnumWindowsProc = ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
 GetWindowText = ctypes.windll.user32.GetWindowTextW
 GetWindowTextLength = ctypes.windll.user32.GetWindowTextLengthW
-GetWindowRect = ctypes.windll.user32.GetWindowRect
-GetSystemMetrics = ctypes.windll.user32.GetSystemMetrics
 IsWindow = ctypes.windll.user32.IsWindow
 
 # Class for temporarily storing securities
@@ -47,12 +40,8 @@ class TableWindow(object):
         self.max_seats = max_seats
         self.table_no = re.split(" ", table_name)[3]
         self.re_table_no = f"{tourney_no}\sTable\s(\d+)"
-        self.width = 0
-        self.height = 0
-        self.x = 0
-        self.y = 0
         self.hud = None  # fill in later
-        self.gdk_handle = None
+        self.q_window = None
         self.number = None
 
         self.find_table_parameters()
@@ -60,15 +49,7 @@ class TableWindow(object):
         if self.number is None:
             return None
 
-        geo = self.get_geometry()
-
-        if geo is None:
-            return None
-
-        self.width = geo["width"]
-        self.height = geo["height"]
-        self.x = geo["x"]
-        self.y = geo["y"]
+        self.q_window = QWindow.fromWinId(self.number)
 
     def get_table_no(self):
         window_title = self.get_window_title()
@@ -83,46 +64,8 @@ class TableWindow(object):
 
         return 0
 
-    ####################################################################
-    #    check_table() is meant to be called by the hud periodically to
-    #    determine if the client has been moved or resized. check_table()
-    #    also checks and signals if the client has been closed.
     def check_table(self):
-        return self.check_size() or self.check_loc()
-
-    ####################################################################
-    #    "check" methods. They use the corresponding get method, update the
-    #    table object and return the name of the signal to be emitted or
-    #    False if unchanged. These do not signal for destroyed
-    #    clients to prevent a race condition.
-
-    #    These might be called by a Window.timeout, so they must not
-    #    return False, or the timeout will be cancelled.
-    def check_size(self):
-        new_geo = self.get_geometry()
-
-        if new_geo is None:  # window destroyed
-            return "client_destroyed"
-
-        if self.width != new_geo["width"] or self.height != new_geo["height"]:  # window resized
-            self.width = new_geo["width"]
-            self.height = new_geo["height"]
-            return "client_resized"
-
-        return False  # no change
-
-    def check_loc(self):
-        new_geo = self.get_geometry()
-
-        if new_geo is None:  # window destroyed
-            return "client_destroyed"
-
-        if self.x != new_geo["x"] or self.y != new_geo["y"]:  # window moved
-            self.x = new_geo["x"]
-            self.y = new_geo["y"]
-            return "client_moved"
-
-        return False  # no change
+        return IsWindow(self.number)
 
     def has_table_title_changed(self):
         result = self.get_table_no()
@@ -161,37 +104,6 @@ class TableWindow(object):
         if self.number is None:
             log.error(f"Window {self.table_name} not found.")
 
-    def get_geometry(self):
-        # Get the window geometry
-        try:
-            rect = ctypes.wintypes.RECT()
-
-            if IsWindow(self.number):
-                result = GetWindowRect(self.number, ctypes.byref(rect))
-
-                if result != 0:
-                    x, y = rect.left, rect.top
-                    width = rect.right - rect.left
-                    height = rect.bottom - rect.top
-                    b_width = GetSystemMetrics(SM_CXSIZEFRAME)
-                    tb_height = GetSystemMetrics(SM_CYCAPTION)
-
-                    return {
-                        "x": x + b_width,
-                        "y": y + tb_height + b_width,
-                        "height": height - 2 * b_width - tb_height,
-                        "width": width - 2 * b_width
-                    }
-                else:
-                    log.error(f"Failed to retrieve GetWindowRect for hwnd: {self.number}")
-                    return None
-            else:
-                log.error(f"The window {self.number} is not valid.")
-                return None
-        except Exception as e:
-            log.error(f"Error retrieving geometry: {e}")
-            return None
-
     def get_window_title(self):
         length = GetWindowTextLength(self.number)
         buff = ctypes.create_unicode_buffer(length + 1)
@@ -199,11 +111,7 @@ class TableWindow(object):
 
         return buff.value
 
-    def topify(self, window):
-        # Make the specified Qt window 'always on top' under Windows
-        if self.gdk_handle is None:
-            self.gdk_handle = QWindow.fromWinId(self.number)
-
-        q_window = window.windowHandle()
-        q_window.setTransientParent(self.gdk_handle)
-        #q_window.setFlags(Qt.Tool | Qt.FramelessWindowHint | Qt.WindowDoesNotAcceptFocus | Qt.WindowStaysOnTopHint)
+    def topify(self, widget):
+        # Set the table's window as parent
+        window_handle = widget.windowHandle()
+        window_handle.setParent(self.q_window)

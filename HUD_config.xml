@@ -16,7 +16,7 @@
               of 16.7 (50 divided by 3) to big blind of 150 (50 times 3) are included
             - To include all levels, use a value of "10000"
     -->
-    <hud_ui aggregation_level_multiplier="10000" seats_style="E" label="FPDB Menu" hud_menu_x_shift="20" hud_menu_y_shift="-20"/>
+    <hud_ui aggregation_level_multiplier="10000" seats_style="E" label="FPDB Menu" hud_menu_x_shift="5" hud_menu_y_shift="20"/>
     <site site_name="PokerStars" screen_name="SamFio87" hh_path="C:\Users\sf\AppData\Local\PokerStars.IT\HandHistory\SamFio87" ts_path="C:\Users\sf\AppData\Local\PokerStars.IT\TournSummary\SamFio87">
         <fav max="2" fav_seat="1"/>
         <fav max="3" fav_seat="2"/>
@@ -26,32 +26,31 @@
         <fav max="7" fav_seat="4"/>
         <fav max="8" fav_seat="4"/>
         <fav max="9" fav_seat="5"/>
-        <fav max="10" fav_seat="5"/>
     </site>
     <layout_set>
-        <layout max="2" height="469" width="640">
-            <location seat="1" x="651" y="288"/>
-            <location seat="2" x="10" y="288"/>
+        <layout max="2" height="430" width="624">
+            <location seat="1" x="275" y="340"/>
+            <location seat="2" x="258" y="81"/>
         </layout>
-        <layout max="3" height="469" width="640">
-            <location seat="1" x="1211" y="314"/>
-            <location seat="2" x="317" y="338"/>
-            <location seat="3" x="386" y="710"/>
+        <layout max="3" height="430" width="624">
+            <location seat="1" x="484" y="126"/>
+            <location seat="2" x="275" y="340"/>
+            <location seat="3" x="33" y="127"/>
         </layout>
-        <layout max="4" height="469" width="640">
-            <location seat="1" x="566" y="90"/>
-            <location seat="2" x="317" y="338"/>
+        <layout max="4" height="430" width="624">
+            <location seat="1" x="505" y="203"/>
+            <location seat="2" x="275" y="340"/>
             <location seat="3" x="113" y="402"/>
-            <location seat="4" x="110" y="87"/>
+            <location seat="4" x="16" y="202"/>
         </layout>
-        <layout max="5" height="469" width="640">
-            <location seat="1" x="573" y="41"/>
-            <location seat="2" x="512" y="411"/>
-            <location seat="3" x="317" y="338"/>
-            <location seat="4" x="112" y="41"/>
-            <location seat="5" x="32" y="291"/>
+        <layout max="5" height="430" width="624">
+            <location seat="1" x="335" y="80"/>
+            <location seat="2" x="505" y="208"/>
+            <location seat="3" x="275" y="340"/>
+            <location seat="4" x="8" y="206"/>
+            <location seat="5" x="168" y="83"/>
         </layout>
-        <layout max="6" height="438" width="632">
+        <layout max="6" height="430" width="624">
             <location seat="1" x="484" y="126"/>
             <location seat="2" x="496" y="261"/>
             <location seat="3" x="275" y="340"/>
@@ -59,47 +58,35 @@
             <location seat="5" x="33" y="127"/>
             <location seat="6" x="258" y="81"/>
         </layout>
-        <layout max="7" height="438" width="632">
+        <layout max="7" height="430" width="624">
 			<location seat="1" x="480" y="32"/>
-			<location seat="2" x="522" y="134"/>
-			<location seat="3" x="452" y="261"/>
-			<location seat="4" x="291" y="340"/>
-			<location seat="5" x="34" y="260"/>
-			<location seat="6" x="4" y="135"/>
+			<location seat="2" x="505" y="203"/>
+			<location seat="3" x="450" y="303"/>
+			<location seat="4" x="275" y="340"/>
+			<location seat="5" x="86" y="300"/>
+			<location seat="6" x="16" y="202"/>
 			<location seat="7" x="265" y="19"/>
         </layout>
-        <layout max="8" height="438" width="632">
+        <layout max="8" height="430" width="624">
             <location seat="1" x="469" y="112"/>
             <location seat="2" x="505" y="203"/>
             <location seat="3" x="450" y="303"/>
-            <location seat="4" x="265" y="342"/>
+            <location seat="4" x="275" y="340"/>
             <location seat="5" x="86" y="300"/>
             <location seat="6" x="16" y="202"/>
             <location seat="7" x="74" y="115"/>
-            <location seat="8" x="252" y="82"/>
+            <location seat="8" x="258" y="81"/>
         </layout>
-        <layout max="9" height="438" width="632">
+        <layout max="9" height="430" width="624">
             <location seat="1" x="335" y="80"/>
             <location seat="2" x="494" y="125"/>
             <location seat="3" x="505" y="208"/>
             <location seat="4" x="437" y="296"/>
-            <location seat="5" x="267" y="338"/>
+            <location seat="5" x="275" y="340"/>
             <location seat="6" x="78" y="297"/>
             <location seat="7" x="8" y="206"/>
             <location seat="8" x="15" y="125"/>
             <location seat="9" x="168" y="83"/>
-        </layout>
-        <layout max="10" height="469" width="640">
-            <location seat="1" x="684" y="61"/>
-            <location seat="2" x="689" y="239"/>
-            <location seat="3" x="692" y="346"/>
-            <location seat="4" x="586" y="393"/>
-            <location seat="5" x="317" y="338"/>
-            <location seat="6" x="267" y="440"/>
-            <location seat="7" x="0" y="361"/>
-            <location seat="8" x="0" y="280"/>
-            <location seat="9" x="121" y="280"/>
-            <location seat="10" x="46" y="30"/>
         </layout>
     </layout_set>
     <stat_set rows="3" cols="5" bg_color="#000000" fg_color="#FFFFFF" font_family="Sans" font_size="6" opacity="0.8">

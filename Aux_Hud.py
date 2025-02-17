@@ -36,22 +36,12 @@ class SimpleHud(object):
 
     def move_windows(self):
         for i in list(range(1, self.hud.max_seats + 1)):
-            self.m_windows[i].move(self.positions[i][0] + self.hud.table.x, self.positions[i][1] + self.hud.table.y)
-
-        self.table_menu.move_windows()
+            self.m_windows[i].move(self.positions[i][0], self.positions[i][1])
 
     def save_layout(self):
         # Save new layout back to the aux element in the config file.
         new_locs = {self.adj[int(i)]: ((pos[0]), (pos[1])) for i, pos in list(self.positions.items())}
-        self.config.save_layout_set(self.hud.max_seats, new_locs, self.hud.table.width, self.hud.table.height)
-
-    def resize_windows(self):
-        # Resize calculation has already happened in HUD_main&hud.py
-        # refresh our internal map to reflect these changes
-        for i in list(range(1, self.hud.max_seats + 1)):
-            self.positions[i] = self.hud.layout.location[self.adj[i]]
-        # and then move everything to the new places
-        self.move_windows()
+        self.config.save_layout_set(self.hud.max_seats, new_locs, self.hud.table.q_window.width(), self.hud.table.q_window.height())
 
     def create(self):
         self.adj = self.adj_seats()
@@ -61,12 +51,10 @@ class SimpleHud(object):
             x, y = self.hud.layout.location[self.adj[i]]
             self.m_windows[i] = SimpleStatWindow(self, i)
             self.positions[i] = self.create_scale_position(x, y)
-            self.m_windows[i].move(self.positions[i][0] + self.hud.table.x, self.positions[i][1] + self.hud.table.y)
-            self.m_windows[i].setWindowOpacity(float(self.opacity))
             self.hud.layout.location[self.adj[i]] = self.positions[i]
 
             # Main action below - fill the created window with content
-            self.m_windows[i].create_contents(i)
+            self.m_windows[i].create_contents()
 
             self.m_windows[i].create()  # ensure there is a native window handle for topify
             self.hud.table.topify(self.m_windows[i])
@@ -76,8 +64,8 @@ class SimpleHud(object):
         self.hud.table.topify(self.table_menu)
         self.table_menu.show()
 
-        self.hud.layout.height = self.hud.table.height
-        self.hud.layout.width = self.hud.table.width
+        self.hud.layout.height = self.hud.table.q_window.height()
+        self.hud.layout.width = self.hud.table.q_window.width()
 
         self.update_gui()
 
@@ -85,16 +73,23 @@ class SimpleHud(object):
         # For a given x/y, scale according to current height/width vs. reference height/width
         # This method is needed for create (because the table may not be the same size as the layout in config)
         # Any subsequent resizing of this table will be handled through hud_main
-        x_scale = 1.0 * self.hud.table.width / self.hud.layout.width
-        y_scale = 1.0 * self.hud.table.height / self.hud.layout.height
+        x_scale = 1.0 * self.hud.table.q_window.width() / self.hud.layout.width
+        y_scale = 1.0 * self.hud.table.q_window.height() / self.hud.layout.height
         return int(x * x_scale), int(y * y_scale)
 
     def update_gui(self):
         for i in list(self.m_windows.keys()):
             self.m_windows[i].update_contents(i)
-        # Reload latest block positions, in case another aux has changed them
-        # these lines allow the propagation of block-moves across the hud handlers for this table
-        self.resize_windows()
+
+            if self.hud.layout.height != self.hud.table.q_window.height() or self.hud.layout.width != self.hud.table.q_window.width():
+                for i in list(range(1, self.hud.max_seats + 1)):
+                    self.positions[i] = self.create_scale_position(self.hud.layout.location[self.adj[i]][0], self.hud.layout.location[self.adj[i]][1])
+                    self.hud.layout.location[self.adj[i]] = self.positions[i]
+
+                self.hud.layout.height = self.hud.table.q_window.height()
+                self.hud.layout.width = self.hud.table.q_window.width()
+
+        self.move_windows()
 
     def destroy(self):
         # Destroy all of the seat windows
@@ -118,10 +113,8 @@ class SimpleHud(object):
         # This method updates the current location for each statblock.
         # This method is needed to record moves for an individual block.
         if i:
-            new_abs_position = widget.pos()  # absolute value of the new position
-            new_position = (new_abs_position.x() - self.hud.table.x, new_abs_position.y() - self.hud.table.y)
-            self.positions[i] = new_position  # write this back to our map
-            self.hud.layout.location[self.adj[i]] = new_position  # update the hud-level dict, so other aux can be told
+            self.positions[i] = (widget.pos().x(), widget.pos().y())  # write this back to our map
+            self.hud.layout.location[self.adj[i]] = self.positions[i]  # update the hud-level dict, so other aux can be told
 
     def adj_seats(self):
         # Determine how to adjust seating arrangements
@@ -156,7 +149,7 @@ class SimpleHud(object):
 class SimpleStatWindow(QWidget):
     # Simple window class for stat windows
     def __init__(self, aw, seat):
-        super().__init__(None, Qt.Tool | Qt.FramelessWindowHint | Qt.WindowDoesNotAcceptFocus | Qt.WindowStaysOnTopHint)
+        super().__init__(None, Qt.Tool | Qt.FramelessWindowHint | Qt.WindowDoesNotAcceptFocus)
         self.aw = aw
         self.seat = seat
         self.last_pos = None
@@ -170,7 +163,7 @@ class SimpleStatWindow(QWidget):
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
-            self.button_release_left(event)
+            self.button_release_left()
 
     def mouseMoveEvent(self, event):
         if self.last_pos is not None:
@@ -180,11 +173,11 @@ class SimpleStatWindow(QWidget):
     def button_press_left(self, event):
         self.last_pos = event.globalPos()
 
-    def button_release_left(self, event):
+    def button_release_left(self):
         self.last_pos = None
         self.aw.configure_event_cb(self, self.seat)
 
-    def create_contents(self, i):
+    def create_contents(self):
         self.stat_box = [[None] * self.aw.cols for _ in range(self.aw.rows)]
 
         grid = QGridLayout()
@@ -202,7 +195,7 @@ class SimpleStatWindow(QWidget):
                 grid.addWidget(self.stat_box[r][c].label, r, c)
 
         self.setLayout(grid)
-        self.setStyleSheet(f"QWidget{{background:{self.aw.bg_color};color:{self.aw.fg_color};}}QToolTip{{}}")
+        self.setStyleSheet(f"QWidget{{background:{self.aw.bg_color}; color:{self.aw.fg_color};}}")
 
     def update_contents(self, i):
         player_id = self.aw.get_id_from_seat(i)
@@ -217,8 +210,6 @@ class SimpleStatWindow(QWidget):
                 self.stat_box[r][c].update(player_id, self.aw.hud.stat_dict)
 
         # Player dealt-in, force display of stat block
-        # Need to call move() to re-establish window position
-        self.move(self.aw.positions[i][0] + self.aw.hud.table.x, self.aw.positions[i][1] + self.aw.hud.table.y)
         self.setWindowOpacity(float(self.aw.opacity))
         # Show item, just in case it was hidden by the user
         self.show()
@@ -281,7 +272,7 @@ class SimpleStat(object):
 
 class SimpleTableMenuLabel(QWidget):
     def __init__(self, aw):
-        super().__init__(None, Qt.Tool | Qt.FramelessWindowHint | Qt.WindowDoesNotAcceptFocus | Qt.WindowStaysOnTopHint)
+        super().__init__(None, Qt.Tool | Qt.FramelessWindowHint)
         self.hud = aw.hud
         self.x_shift = aw.x_shift
         self.y_shift = aw.y_shift
@@ -295,29 +286,27 @@ class SimpleTableMenuLabel(QWidget):
         self.layout().setContentsMargins(0, 0, 0, 0)
         self.layout().addWidget(lab)
 
-        self.move(self.hud.table.x + self.x_shift, self.hud.table.y + self.y_shift)
+        self.move(self.x_shift, self.y_shift)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.RightButton:
-            self.button_press_right(event)
+            self.button_press_right()
 
-    def button_press_right(self, event):
+    def button_press_right(self):
         # Handle button clicks in the FPDB main menu event box
         if not self.menu_is_popped:
             self.menu_is_popped = True
-            SimpleTableMenu(self)
-
-    def move_windows(self):
-        # Force menu to the offset position from table origin (do not use common setting)
-        self.move(self.hud.table.x + self.x_shift, self.hud.table.y + self.y_shift)
+            menu = SimpleTableMenu(self)
+            menu.create()  # ensure there is a native window handle for topify
+            self.hud.table.topify(menu)
+            menu.show()
 
 class SimpleTableMenu(QWidget):
-    def __init__(self, parent):
+    def __init__(self, table_menu_label):
         super().__init__(None, Qt.Window | Qt.FramelessWindowHint)
-        self.parent = parent
-        
-        self.setWindowTitle(self.parent.menu_label)
-        self.move(self.parent.hud.table.x + self.parent.x_shift, self.parent.hud.table.y + self.parent.y_shift)
+        self.table_menu_label = table_menu_label
+        self.setWindowTitle(table_menu_label.menu_label)
+        self.move(table_menu_label.x_shift, table_menu_label.y_shift)
 
         grid = QGridLayout()
         vbox = QVBoxLayout()
@@ -329,20 +318,16 @@ class SimpleTableMenu(QWidget):
         grid.addLayout(vbox, 0, 0)
         
         self.setLayout(grid)
-        self.show()
-        self.raise_()
-
-    def delete_event(self):
-        self.parent.menu_is_popped = False
-        self.destroy()
 
     def callback(self, data):
-        if data == "kill":
-            self.parent.hud.parent.kill_hud("kill", self.parent.hud.table.key)
-        elif data == "save":
-            self.parent.hud.save_layout()
+        self.table_menu_label.menu_is_popped = False
 
-        self.delete_event()
+        if data == "kill":
+            self.table_menu_label.hud.parent.kill_hud(self.table_menu_label.hud.table_name)
+        elif data == "save":
+            self.table_menu_label.hud.save_layout()
+
+        self.destroy()
 
     def build_button(self, name, data):
         button = QPushButton(name)
