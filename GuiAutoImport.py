@@ -63,10 +63,6 @@ class GuiAutoImport(QWidget):
                     try:
                         if Configuration.INSTALL_METHOD == "exe":
                             command = "HUD_main.exe"
-                        #else:
-                        #    command = f"python \"{Configuration.FPDB_ROOT_PATH}\HUD_main.pyw\""
-
-                        if Configuration.INSTALL_METHOD == "exe":
                             self.pipe_to_hud = subprocess.Popen(
                                 command,
                                 bufsize=0,
@@ -75,8 +71,9 @@ class GuiAutoImport(QWidget):
                                 stderr=subprocess.PIPE,
                                 universal_newlines=True
                             )
-                        #else:
-                        #    self.pipe_to_hud = subprocess.Popen(command, bufsize=0, stdin=subprocess.PIPE, universal_newlines=True)
+                        else:
+                            command = f"python \"{Configuration.FPDB_ROOT_PATH}\HUD_main.pyw\""
+                            self.pipe_to_hud = subprocess.Popen(command, bufsize=0, stdin=subprocess.PIPE, universal_newlines=True)
                     except Exception:
                         self.add_text(f"*** GuiAutoImport Error opening pipe: {traceback.format_exc()}")
                     else:

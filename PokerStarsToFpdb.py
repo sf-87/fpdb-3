@@ -1,52 +1,116 @@
+import codecs
 import logging
 import re
 
 from Exceptions import FpdbParseError
-from HandHistoryConverter import HandHistoryConverter
+import Hand
 import PokerStarsStructures
 
 # logging has been set up in fpdb.py or HUD_main.py, use their settings:
 log = logging.getLogger("parser")
 
-class PokerStars(HandHistoryConverter):
-    # Class Variables
-    substitutions = {
-        "LEGAL_ISO": "EUR",  # legal ISO currency codes
-        "LS": "\u20ac",  # legal currency symbols
-        "PLYR": r"(?P<PNAME>.+?)"
-    }
-    limits = {"No Limit": "nl"}
-    games = {"Hold'em": "hold"}
+SUBSTITUTIONS = {
+    "LEGAL_ISO": "EUR",  # legal ISO currency codes
+    "LS": "\u20ac",  # legal currency symbols
+    "PLYR": r"(?P<PNAME>.+?)"
+}
+LIMITS = {"No Limit": "nl"}
+GAMES = {"Hold'em": "hold"}
+RE_SPLIT_HANDS = re.compile("(?:\s?\n){2,}")
+RE_GAME_INFO = re.compile(
+    r"""
+        (PokerStars|POKERSTARS)\sHand\s\#(?P<HID>\d+):\s(Tournament|TOURNAMENT)\s\#(?P<TOURNO>\d+),\s
+        (?P<BUYIN>(?P<BIAMT>(?P<BILS>%(LS)s)[.\d]+)\+?(?P<FEE>[%(LS)s.\d]+)?\+?(?P<BOUNTY>[%(LS)s.\d]+)?\s(?P<BICURRENCY>%(LEGAL_ISO)s))\s
+        (?P<GAME>Hold'em|HOLD'EM)\s(?P<LIMIT>No\sLimit|NO\sLIMIT)\s
+        -\s(Level|LEVEL)\s([IVXLC]+)\s\((?P<SB>\d+)/(?P<BB>\d+)\)
+        (\s(?P<ADM>\[(ADM|AAMS)\sID:\s[A-Z\d]+\]))?
+        \s-\s(?P<DATETIME>.*$)
+    """
+    % SUBSTITUTIONS,
+    re.MULTILINE | re.VERBOSE
+)
+RE_DATE_TIME = re.compile(r"(?P<Y>\d{4})\/(?P<M>\d{2})\/(?P<D>\d{2})[\- ]+(?P<H>\d{1,2}):(?P<MIN>\d{2}):(?P<S>\d{2})")
+RE_HAND_INFO = re.compile(r"Table\s\'(?P<TABLE>.+?)\'\s((?P<MAX>\d+)-[Mm]ax)")
+RE_BUTTON = re.compile(r"Seat #(?P<BUTTON>\d+) is the button")
+RE_PLAYER_INFO = re.compile(r"Seat\s(?P<SEAT>\d+):\s%(PLYR)s\s\((?P<CASH>\d+)\sin\schips(,\s%(LS)s(?P<BOUNTY>[.\d]+)\sbounty)?\)" % SUBSTITUTIONS)
+RE_ANTES = re.compile(r"%(PLYR)s:\sposts\sthe\sante\s(?P<ANTE>\d+)" % SUBSTITUTIONS)
+RE_POST_SB = re.compile(r"%(PLYR)s:\sposts\ssmall\sblind\s(?P<SB>\d+)" % SUBSTITUTIONS)
+RE_POST_BB = re.compile(r"%(PLYR)s:\sposts\sbig\sblind\s(?P<BB>\d+)" % SUBSTITUTIONS)
+RE_HERO_CARDS = re.compile(r"Dealt\sto\s%(PLYR)s\s(\[(?P<CARDS>.+?)\])" % SUBSTITUTIONS)
+RE_BOARD = re.compile(r"\[(?P<CARDS>.+)\]")
+RE_ACTION = re.compile(r"%(PLYR)s:(?P<ATYPE>\sbets|\schecks|\sraises|\scalls|\sfolds)(\s(?P<BET>\d+))?(\sto\s(?P<BETTO>\d+))?\s*(and\sis\sall.in)?" % SUBSTITUTIONS)
+RE_UNCALLED = re.compile(r"Uncalled\sbet\s\((?P<BET>\d+)\)\sreturned\sto\s%(PLYR)s$" % SUBSTITUTIONS, re.MULTILINE)
+# Kaor89 wins €0.45 for eliminating campisi1995 and their own bounty increases by €0.45 to €1.35
+# Berry67 wins €0.23 for splitting the elimination of Iroshi1 and their own bounty increases by €0.22 to €1.12
+RE_BOUNTY = re.compile(r"%(PLYR)s\swins\s%(LS)s(?P<BOUNTY>[.\d]+)\sfor\s(splitting\sthe\selimination\sof|eliminating)\s.+?\sand\stheir\sown\sbounty\sincreases\sby\s%(LS)s[.\d]+\sto\s%(LS)s(?P<ENDBOUNTY>[.\d]+)" % SUBSTITUTIONS)
+RE_SHOWN_CARDS = re.compile(r"Seat\s\d+:\s%(PLYR)s\s((\(button\)|\(small\sblind\)|\(big\sblind\)|\(button\)\s\(small\sblind\))\s)?(showed|mucked)\s\[(?P<CARDS>.*)\]" % SUBSTITUTIONS)
 
-    # Static regexes
-    re_SplitHands = re.compile("(?:\s?\n){2,}")
-    re_GameInfo = re.compile(
-        r"""
-          (PokerStars|POKERSTARS)\sHand\s\#(?P<HID>\d+):\s(Tournament|TOURNAMENT)\s\#(?P<TOURNO>\d+),\s
-          (?P<BUYIN>(?P<BIAMT>(?P<BILS>%(LS)s)[.\d]+)\+?(?P<FEE>[%(LS)s.\d]+)?\+?(?P<BOUNTY>[%(LS)s.\d]+)?\s(?P<BICURRENCY>%(LEGAL_ISO)s))\s
-          (?P<GAME>Hold'em|HOLD'EM)\s(?P<LIMIT>No\sLimit|NO\sLIMIT)\s
-          -\s(Level|LEVEL)\s([IVXLC]+)\s\((?P<SB>\d+)/(?P<BB>\d+)\)
-          (\s(?P<ADM>\[(ADM|AAMS)\sID:\s[A-Z\d]+\]))?
-          \s-\s(?P<DATETIME>.*$)
-        """
-        % substitutions,
-        re.MULTILINE | re.VERBOSE
-    )
-    re_DateTime = re.compile(r"(?P<Y>\d{4})\/(?P<M>\d{2})\/(?P<D>\d{2})[\- ]+(?P<H>\d{1,2}):(?P<MIN>\d{2}):(?P<S>\d{2})")
-    re_HandInfo = re.compile(r"Table\s\'(?P<TABLE>.+?)\'\s((?P<MAX>\d+)-[Mm]ax)")
-    re_Button = re.compile(r"Seat #(?P<BUTTON>\d+) is the button")
-    re_PlayerInfo = re.compile(r"Seat\s(?P<SEAT>\d+):\s%(PLYR)s\s\((?P<CASH>\d+)\sin\schips(,\s%(LS)s(?P<BOUNTY>[.\d]+)\sbounty)?\)" % substitutions)
-    re_Antes = re.compile(r"%(PLYR)s:\sposts\sthe\sante\s(?P<ANTE>\d+)" % substitutions)
-    re_PostSB = re.compile(r"%(PLYR)s:\sposts\ssmall\sblind\s(?P<SB>\d+)" % substitutions)
-    re_PostBB = re.compile(r"%(PLYR)s:\sposts\sbig\sblind\s(?P<BB>\d+)" % substitutions)
-    re_HeroCards = re.compile(r"Dealt\sto\s%(PLYR)s\s(\[(?P<CARDS>.+?)\])" % substitutions)
-    re_Board = re.compile(r"\[(?P<CARDS>.+)\]")
-    re_Action = re.compile(r"%(PLYR)s:(?P<ATYPE>\sbets|\schecks|\sraises|\scalls|\sfolds)(\s(?P<BET>\d+))?(\sto\s(?P<BETTO>\d+))?\s*(and\sis\sall.in)?" % substitutions)
-    re_Uncalled = re.compile(r"Uncalled\sbet\s\((?P<BET>\d+)\)\sreturned\sto\s%(PLYR)s$" % substitutions, re.MULTILINE)
-    # Kaor89 wins €0.45 for eliminating campisi1995 and their own bounty increases by €0.45 to €1.35
-    # Berry67 wins €0.23 for splitting the elimination of Iroshi1 and their own bounty increases by €0.22 to €1.12
-    re_Bounty = re.compile(r"%(PLYR)s\swins\s%(LS)s(?P<BOUNTY>[.\d]+)\sfor\s(splitting\sthe\selimination\sof|eliminating)\s.+?\sand\stheir\sown\sbounty\sincreases\sby\s%(LS)s[.\d]+\sto\s%(LS)s(?P<ENDBOUNTY>[.\d]+)" % substitutions)
-    re_ShownCards = re.compile(r"Seat\s\d+:\s%(PLYR)s\s((\(button\)|\(small\sblind\)|\(big\sblind\)|\(button\)\s\(small\sblind\))\s)?(showed|mucked)\s\[(?P<CARDS>.*)\]" % substitutions)
+class PokerStars(object):
+    def __init__(self, file, index, auto_pop):
+        self.file = file
+        self.index = index
+        self.auto_pop = auto_pop
+        self.processed_hands = []
+        self.num_hands = 0
+        self.num_errors = 0
+
+        self.start()
+
+    def start(self):
+        # Process a hand at a time from the input specified by file
+        hands_list = self.get_hands_list()
+
+        log.info(f"Parsing {len(hands_list)} hands")
+
+        for hand_text in hands_list:
+            try:
+                self.processed_hands.append(self.process_hand(hand_text))
+            except FpdbParseError:
+                self.num_errors += 1
+                log.error(f"FpdbParseError for file '{self.file}'")
+
+        self.num_hands = len(hands_list)
+
+        log.info(f"Read {self.num_hands} hands ({self.num_errors} failed)")
+
+    def get_hands_list(self):
+        # Return a list of hand_texts in the file at self.file
+        self.read_file()
+
+        if self.obs is None or self.obs == "":
+            log.info(f"Read no hands from file: '{self.file}'")
+            return []
+
+        hand_list = re.split(RE_SPLIT_HANDS, self.obs)
+
+        return hand_list
+
+    def process_hand(self, hand_text):
+        game_type = self.determine_game_type(hand_text)
+        game_details = None
+
+        if game_type is None:
+            log.error("Unsupported game type: unmatched")
+            raise FpdbParseError
+
+        game_details = [game_type["base"], game_type["limitType"]]
+
+        if game_details in self.read_supported_games():
+            return Hand.HoldemHand(self, game_type, hand_text)
+
+        log.error(f"Unsupported game type: {game_type}")
+        raise FpdbParseError
+
+    def read_file(self):
+        try:
+            with codecs.open(self.file, "r", "utf-8") as file_reader:
+                whole_file = file_reader.read().replace("\r\n", "\n").replace("\xa0", " ")
+                file_reader.close()
+
+            self.obs = whole_file[self.index :].rstrip()
+            self.index = len(whole_file)
+        except Exception as e:
+            log.error(f"Failed to read file {self.file}: {e}")
 
     def read_supported_games(self):
         return [["hold", "nl"]]
@@ -55,7 +119,7 @@ class PokerStars(HandHistoryConverter):
         info = {}
 
         try:
-            m = self.re_GameInfo.search(hand_text)
+            m = RE_GAME_INFO.search(hand_text)
 
             if not m:
                 log.error(f"PokerStarsToFpdb.determine_game_type: '{self.file}'")
@@ -63,8 +127,8 @@ class PokerStars(HandHistoryConverter):
 
             mg = m.groupdict()
 
-            info["limitType"] = self.limits[mg["LIMIT"]]
-            info["base"] = self.games[mg["GAME"]]
+            info["limitType"] = LIMITS[mg["LIMIT"]]
+            info["base"] = GAMES[mg["GAME"]]
             info["sb"] = mg["SB"]
             info["bb"] = mg["BB"]
             info["ante"] = "0"
@@ -78,8 +142,8 @@ class PokerStars(HandHistoryConverter):
         info = {}
 
         try:
-            m = self.re_GameInfo.search(hand.hand_text)
-            m2 = self.re_HandInfo.search(hand.hand_text)
+            m = RE_GAME_INFO.search(hand.hand_text)
+            m2 = RE_HAND_INFO.search(hand.hand_text)
 
             if m is None or m2 is None:
                 log.error(f"PokerStarsToFpdb.read_hand_info: '{self.file}'")
@@ -115,7 +179,7 @@ class PokerStars(HandHistoryConverter):
                 hand.is_private = True
                 hand.speed = "Turbo"
 
-            m3 = self.re_DateTime.finditer(info["DATETIME"])
+            m3 = RE_DATE_TIME.finditer(info["DATETIME"])
             a = next(m3)
             hand.start_time = f"{a.group('Y')}/{a.group('M')}/{a.group('D')} {a.group('H')}:{a.group('MIN')}:{a.group('S')}"
 
@@ -133,11 +197,11 @@ class PokerStars(HandHistoryConverter):
             raise FpdbParseError
 
     def read_button(self, hand):
-        m = self.re_Button.search(hand.hand_text)
+        m = RE_BUTTON.search(hand.hand_text)
         hand.button_pos = int(m.group("BUTTON"))
 
     def read_player_stacks(self, hand):
-        for m in self.re_PlayerInfo.finditer(hand.hand_text):
+        for m in RE_PLAYER_INFO.finditer(hand.hand_text):
             hand.add_player(
                 int(m.group("SEAT")),
                 m.group("PNAME"),
@@ -160,16 +224,16 @@ class PokerStars(HandHistoryConverter):
         hand.add_streets(m)
 
     def read_community_cards(self, hand, street):
-        m = self.re_Board.search(hand.streets[street])
+        m = RE_BOARD.search(hand.streets[street])
         hand.set_community_cards(street, m.group("CARDS").split(" "))
 
     def read_antes(self, hand):
-        for m in self.re_Antes.finditer(hand.hand_text):
+        for m in RE_ANTES.finditer(hand.hand_text):
             hand.add_ante(m.group("PNAME"), m.group("ANTE"))
 
     def read_blinds(self, hand):
-        m = self.re_PostSB.search(hand.hand_text)
-        m2 = self.re_PostBB.search(hand.hand_text)
+        m = RE_POST_SB.search(hand.hand_text)
+        m2 = RE_POST_BB.search(hand.hand_text)
 
         if m:
             hand.add_blind(m.group("PNAME"), "small blind", m.group("SB"))
@@ -179,7 +243,7 @@ class PokerStars(HandHistoryConverter):
 
     def read_hole_cards(self, hand):
         street = "PREFLOP"
-        m = self.re_HeroCards.search(hand.streets[street])
+        m = RE_HERO_CARDS.search(hand.streets[street])
         hand.hero = m.group("PNAME")
         cards = m.group("CARDS").split(" ")
         hand.add_hole_cards(hand.hero, cards)
@@ -188,7 +252,7 @@ class PokerStars(HandHistoryConverter):
         if not hand.streets[street]:
             return
 
-        m = self.re_Action.finditer(hand.streets[street])
+        m = RE_ACTION.finditer(hand.streets[street])
 
         for action in m:
             if action.group("ATYPE") == " folds":
@@ -204,13 +268,13 @@ class PokerStars(HandHistoryConverter):
             else:
                 raise FpdbParseError(f"Unimplemented read_action: '{action.group('PNAME')}' '{action.group('ATYPE')}'")
 
-        m = self.re_Uncalled.search(hand.streets[street])
+        m = RE_UNCALLED.search(hand.streets[street])
 
         if m:
             hand.add_uncalled(street, m.group("PNAME"), m.group("BET"))
 
     def read_bounty(self, hand):
-        for m in self.re_Bounty.finditer(hand.hand_text):
+        for m in RE_BOUNTY.finditer(hand.hand_text):
             if m.group("PNAME") not in hand.won_bounty:
                 hand.won_bounty[m.group("PNAME")] = 0
 
@@ -218,7 +282,7 @@ class PokerStars(HandHistoryConverter):
             hand.end_bounty[m.group("PNAME")] = float(m.group("ENDBOUNTY"))
 
     def read_shown_cards(self, hand):
-        for m in self.re_ShownCards.finditer(hand.hand_text):
+        for m in RE_SHOWN_CARDS.finditer(hand.hand_text):
             cards = m.group("CARDS").split(" ")
 
             hand.add_hole_cards(m.group("PNAME"), cards)

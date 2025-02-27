@@ -33,7 +33,6 @@ $FILES = @(
     "GuiTourneyGraphViewer.py",
     "GuiTourneyPlayerStats.py",
     "Hand.py",
-    "HandHistoryConverter.py",
     "Hud.py",
     "HUD_config.xml",
     "HUD_main.pyw",
