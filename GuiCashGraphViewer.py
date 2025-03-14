@@ -11,14 +11,14 @@ from PyQt5.QtWidgets import QFrame, QScrollArea, QSplitter, QVBoxLayout
 
 matplotlib.use("qt5agg")
 
-class GuiTourneyGraphViewer(QSplitter):
+class GuiCashGraphViewer(QSplitter):
     def __init__(self, db, parent):
         super().__init__(parent)
         self.db = db
         self.colors = {'background': '#31363b', 'foreground': '#ffffff', 'grid': '#444444'}
         self.fig = None
         self.canvas = None
-        self.filters = Filters.Filters(self.db, { "TourneyBuyIn": True, "Dates": True, "Button": True })
+        self.filters = Filters.Filters(self.db, { "Stakes": True, "Dates": True, "Button": True })
         self.filters.register_button_name("Refresh Graph")
         self.filters.register_button_callback(self.generate_graph)
         self.graph_box = QVBoxLayout()
@@ -57,7 +57,7 @@ class GuiTourneyGraphViewer(QSplitter):
         self.clear_graph_data()
 
         ax = self.fig.add_subplot(111)
-        ax.set_xlabel("Tournaments", color=self.colors["foreground"])
+        ax.set_xlabel("Hands", color=self.colors["foreground"])
         ax.set_facecolor(self.colors["background"])
         ax.tick_params(axis="x", colors=self.colors["foreground"])
         ax.tick_params(axis="y", colors=self.colors["foreground"])
@@ -73,8 +73,8 @@ class GuiTourneyGraphViewer(QSplitter):
         if len(green) == 1:
             ax.set_title("No Data for Player Found", color=self.colors["foreground"])
         else:
-            ax.set_title("Tournament Results", color=self.colors["foreground"])
-            ax.plot(green, color="green", label=f"Tournaments: {len(green) - 1}\nProfit: \u20ac{green[-1]:.2f}")
+            ax.set_title("Cash Results", color=self.colors["foreground"])
+            ax.plot(green, color="green", label=f"Hands: {len(green) - 1}\nProfit: \u20ac{green[-1]:.2f}")
             ax.legend(
                 loc="upper left",
                 fancybox=True,
@@ -89,8 +89,8 @@ class GuiTourneyGraphViewer(QSplitter):
 
     def get_data(self):
         start_date, end_date = self.filters.get_dates()
-        tourney_buy_ins = ' OR '.join(tuple(f"(tt.buyIn = {Decimal(buy_in.split(',')[0])} AND tt.fee = {Decimal(buy_in.split(',')[1])})" for buy_in in self.filters.get_tourney_buy_ins()))
-        winnings = self.db.get_tourney_player_graph_stats(start_date, end_date, tourney_buy_ins)
+        stakes = ' OR '.join(tuple(f"(gt.smallBlind = {Decimal(stakes.split(',')[0])} AND gt.BigBlind = {Decimal(stakes.split(',')[1])})" for stakes in self.filters.get_stakes()))
+        winnings = self.db.get_cash_player_graph_stats(start_date, end_date, stakes)
         green = [Decimal(x[0]) for x in winnings]
         green.insert(0, Decimal(0))
         greenline = cumsum(green)

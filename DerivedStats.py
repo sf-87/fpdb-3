@@ -8,6 +8,9 @@ def stats_initializer():
     init["seatNo"] = None
     init["card1"] = None
     init["card2"] = None
+    init["winnings"] = 0
+    init["totalProfit"] = 0
+    init["startingHand"] = None
     init["street0VPIChance"] = True
     init["street0VPI"] = False
     init["street0AggrChance"] = True
@@ -48,8 +51,6 @@ def vpip(hand):
     for action in hand.actions[hand.action_streets[1]]:
         if action[1] in ("calls", "raises"):
             vpipers.add(action[0])
-
-    hand.hand["playersVPI"] = len(vpipers)
 
     for player in hand.players:
         if player[1] in vpipers:

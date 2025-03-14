@@ -1,4 +1,5 @@
 import codecs
+from decimal import Decimal
 import logging
 import re
 
@@ -69,11 +70,11 @@ class PokerStarsSummary(object):
 
             self.tour_no = int(info["TOURNO"])
             self.entries = int(info["ENTRIES"])
-            self.prize_pool = float(info["PRIZEPOOL"])
+            self.prize_pool = Decimal(info["PRIZEPOOL"])
 
             m2 = RE_DATE_TIME.finditer(info["DATETIME"])
             a = next(m2)
-            self.start_time = f"{a.group('Y')}/{a.group('M')}/{a.group('D')} {a.group('H')}:{a.group('MIN')}:{a.group('S')}"
+            self.start_time = f"{a.group('Y')}/{a.group('M')}/{a.group('D')} {a.group('H'):0>2}:{a.group('MIN')}:{a.group('S')}"
 
             m3 = RE_PLAYER.finditer(self.file_text)
 
@@ -87,7 +88,7 @@ class PokerStarsSummary(object):
 
                     if mg["WINNINGS"] is not None:
                         ls = mg["LS"]
-                        self.winnings = float(mg["WINNINGS"].strip(ls))
+                        self.winnings = Decimal(mg["WINNINGS"].strip(ls))
 
                     break
         except Exception as e:

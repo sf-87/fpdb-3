@@ -1,3 +1,4 @@
+from decimal import Decimal
 import logging
 
 import DerivedStats
@@ -5,6 +6,8 @@ from Exceptions import FpdbParseError
 
 # logging has been set up in fpdb.py or HUD_main.py, use their settings:
 log = logging.getLogger("hand")
+
+RANKS = {"A": 14, "K": 13, "Q": 12, "J": 11, "T": 10, "9": 9, "8": 8, "7": 7, "6": 6, "5": 5, "4": 4, "3": 3, "2": 2}
 
 class Hand(object):
     def __init__(self, game_type, hand_text):
@@ -21,7 +24,7 @@ class Hand(object):
 
         # tourney stuff
         self.tour_no = 0
-        self.tourney_id = 0
+        self.tourney_id = None
         self.tourney_type_id = 0
         self.buy_in = 0
         self.buy_in_currency = None
@@ -44,6 +47,7 @@ class Hand(object):
         self.actions = {}  # [['mct','bets','$10'],['mika','folds'],['carlg','raises','$20']]
         self.board = {}  # dict from street names to community cards
         self.hole_cards = {}
+        self.collectees = {}
 
         for street in self.action_streets:
             self.streets[street] = ""  # portions of the hand_text, filled by mark_streets()
@@ -79,8 +83,10 @@ class Hand(object):
 
         self.players_ids = db.get_players_ids([p[1] for p in self.players], self.hero)
         self.game_type_id = db.get_game_type_id(self.game_type)
-        self.tourney_type_id = db.get_tourney_type_id(self)
-        self.tourney_id = db.get_tourney_id_from_hand(self)
+
+        if self.game_type["type"] == "tour":
+            self.tourney_type_id = db.get_tourney_type_id(self)
+            self.tourney_id = db.get_tourney_id_from_hand(self)
 
     def assemble_hand(self, file_id):
         stats = DerivedStats.stats_initializer()
@@ -114,7 +120,7 @@ class Hand(object):
             for i in range(len(board_cards), 5):
                 self.hand[f"boardCard{i + 1}"] = None
 
-        DerivedStats.vpip(self)  # Gives playersVPI (num of players vpip)
+        DerivedStats.vpip(self)
 
         self.set_positions()
 
@@ -124,16 +130,27 @@ class Hand(object):
         for player in self.players:
             player_name = player[1]
             player_stats = self.hand_players.get(player_name)
-            player_stats["startStack"] = int(player[2])
+            player_stats["startStack"] = Decimal(player[2])
 
             if player[4] is not None:
-                player_stats["startBounty"] = float(player[4])
-                player_stats["endBounty"] = float(player[4])
+                player_stats["startBounty"] = Decimal(player[4])
+                player_stats["endBounty"] = Decimal(player[4])
 
                 if player_name in self.end_bounty:
                     player_stats["endBounty"] = self.end_bounty.get(player_name)
 
             player_stats["seatNo"] = player[0]
+
+            if player_name in list(self.hole_cards.keys()):
+                player_stats["card1"] = self.hole_cards[player_name][0]
+                player_stats["card2"] = self.hole_cards[player_name][1]
+                player_stats["startingHand"] = self.get_starting_hand(player_stats["card1"], player_stats["card2"])
+
+            if player_name in list(self.collectees.keys()):
+                player_stats["winnings"] = self.collectees[player_name]
+
+            paid = player_stats["startStack"] - self.stacks[player_name]
+            player_stats["totalProfit"] = player_stats["winnings"] - paid
 
         for i in enumerate(self.action_streets[1:]):
             DerivedStats.aggr(self, i[0])
@@ -142,15 +159,6 @@ class Hand(object):
                 DerivedStats.folds(self, i[0])
 
         DerivedStats.calc_cbets(self)
-
-        for player in self.players:
-            player_name = player[1]
-
-            if player_name in list(self.hole_cards.keys()):
-                player_stats = self.hand_players.get(player_name)
-                player_stats["card1"] = self.hole_cards[player_name][0]
-                player_stats["card2"] = self.hole_cards[player_name][1]
-
         DerivedStats.calc_check_raise(self)
         DerivedStats.calc_tfbets(self)
         DerivedStats.calc_steals(self)
@@ -214,7 +222,7 @@ class Hand(object):
 
         if chips is not None:
             self.players.append([seat, name, chips, position, bounty])
-            self.stacks[name] = int(chips)
+            self.stacks[name] = Decimal(chips)
 
             for street in self.action_streets:
                 self.bets[street][name] = []
@@ -254,7 +262,7 @@ class Hand(object):
         self.check_player_exists(player, "add_ante")
 
         street = "ANTES"
-        amount = int(amount)
+        amount = Decimal(amount)
         self.stacks[player] -= amount
 
         act = (player, "ante", amount, self.stacks[player] == 0)
@@ -274,7 +282,7 @@ class Hand(object):
         self.check_player_exists(player, "add_blind")
 
         street = "PREFLOP"
-        amount = int(amount)
+        amount = Decimal(amount)
         self.stacks[player] -= amount
 
         act = (player, blind_type, amount, self.stacks[player] == 0)
@@ -289,7 +297,7 @@ class Hand(object):
 
         self.check_player_exists(player, "add_call")
 
-        amount = int(amount)
+        amount = Decimal(amount)
         self.stacks[player] -= amount
 
         act = (player, "calls", amount, self.stacks[player] == 0)
@@ -304,8 +312,8 @@ class Hand(object):
 
         self.check_player_exists(player, "add_raise_to")
 
-        amount = int(amount)
-        amount_to = int(amount_to)
+        amount = Decimal(amount)
+        amount_to = Decimal(amount_to)
 
         bets = sum(self.bets[street][player])
         called = amount_to - amount - bets
@@ -323,7 +331,7 @@ class Hand(object):
 
         self.check_player_exists(player, "add_bet")
 
-        amount = int(amount)
+        amount = Decimal(amount)
         self.stacks[player] -= amount
 
         act = (player, "bets", amount, self.stacks[player] == 0)
@@ -350,8 +358,35 @@ class Hand(object):
 
         self.check_player_exists(player, "add_uncalled")
 
-        amount = int(amount)
+        amount = Decimal(amount)
         self.stacks[player] += amount
+
+    def add_collected(self, street, player, amount):
+        log.debug(f"add_collected: {street} {player} uncalled {amount}")
+
+        self.check_player_exists(player, "add_collected")
+
+        amount = Decimal(amount)
+
+        if player in list(self.collectees.keys()):
+            self.collectees[player] += amount
+        else:
+            self.collectees[player] = amount
+
+    def get_ordered_hand(self, card1, card2):
+        if RANKS[card1] > RANKS[card2]:
+            return f"{card1}{card2}"
+
+        return f"{card2}{card1}"
+
+    def get_starting_hand(self, card1, card2):
+        if card1[0] == card2[0]:
+            return f"{card1[0]}{card2[0]}"
+
+        if card1[1] == card2[1]:
+            return f"{self.get_ordered_hand(card1[0], card2[0])}s"
+
+        return f"{self.get_ordered_hand(card1[0], card2[0])}o"
 
 class HoldemHand(Hand):
     def __init__(self, hhc, game_type, hand_text):

@@ -32,21 +32,14 @@ class GuiTourneyPlayerStats(QSplitter):
         self.setStretchFactor(1, 1)
 
     def generate_stats(self):
-        list_cols = []
-
         start_date, end_date = self.filters.get_dates()
         result = self.db.get_tourney_player_detailed_stats(start_date, end_date)
 
         model = QStandardItemModel(0, len(self.columns))
+        model.setHorizontalHeaderLabels(self.columns)
 
         self.view.setModel(model)
         self.view.verticalHeader().hide()
-
-        # Create Header
-        for column in self.columns:
-            list_cols.append(column)
-
-        model.setHorizontalHeaderLabels(list_cols)
 
         # Fullfill
         for row_data in result:
@@ -55,7 +48,7 @@ class GuiTourneyPlayerStats(QSplitter):
             for i in range(0, len(row_data)):
                 item = QStandardItem(row_data[i])
                 item.setEditable(False)
-                item.setTextAlignment(Qt.AlignRight)
+                item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
                 tree_row.append(item)
 
             model.appendRow(tree_row)

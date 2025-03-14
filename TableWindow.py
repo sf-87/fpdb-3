@@ -29,7 +29,7 @@ def win_enum_handler(hwnd, lParam):
         buff = ctypes.create_unicode_buffer(length + 1)
         GetWindowText(hwnd, buff, length + 1)
 
-        if "Tournament" in buff.value:
+        if "Tournament" in buff.value or "Hold'em" in buff.value:
             window_info.titles[hwnd] = buff.value
 
     return True
@@ -38,7 +38,7 @@ class TableWindow(object):
     def __init__(self, table_name, max_seats, tourney_no):
         self.table_name = table_name
         self.max_seats = max_seats
-        self.table_no = re.split(" ", table_name)[3]
+        self.table_no = re.split(" ", table_name)[3] if tourney_no is not None else None
         self.re_table_no = f"{tourney_no}\sTable\s(\d+)"
         self.hud = None  # fill in later
         self.q_window = None

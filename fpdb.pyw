@@ -11,6 +11,9 @@ import Database
 from Exceptions import FpdbError
 import GuiAutoImport
 import GuiBulkImport
+import GuiCashGraphViewer
+import GuiCashPlayerStats
+import GuiCashSessionViewer
 import GuiTourneyGraphViewer
 import GuiTourneyPlayerStats
 import interlocks
@@ -124,6 +127,7 @@ class fpdb(QMainWindow):
         mb = self.menuBar()
         import_menu = mb.addMenu("Import")
         hud_menu = mb.addMenu("HUD")
+        cash_menu = mb.addMenu("Cash")
         tournament_menu = mb.addMenu("Tournament")
         maintenance_menu = mb.addMenu("Maintenance")
 
@@ -135,6 +139,9 @@ class fpdb(QMainWindow):
 
         import_menu.addAction(make_action("Bulk Import", self.tab_bulk_import))
         hud_menu.addAction(make_action("HUD and Auto Import", self.tab_auto_import))
+        cash_menu.addAction(make_action("Cash Graphs", self.tab_cash_graph_viewer))
+        cash_menu.addAction(make_action("Cash Stats", self.tab_cash_player_stats))
+        cash_menu.addAction(make_action("Cash Sessions", self.tab_cash_session_viewer))
         tournament_menu.addAction(make_action("Tourney Graphs", self.tab_tourney_graph_viewer))
         tournament_menu.addAction(make_action("Tourney Stats", self.tab_tourney_player_stats))
         maintenance_menu.addAction(make_action("Statistics", self.dia_database_stats))
@@ -170,16 +177,34 @@ class fpdb(QMainWindow):
         self.add_and_display_tab(new_import_thread, "Bulk Import")
 
     def tab_tourney_player_stats(self):
-        # opens a player stats tab
-        new_ps_thread = GuiTourneyPlayerStats.GuiTourneyPlayerStats(self.db, self)
-        self.threads.append(new_ps_thread)
-        self.add_and_display_tab(new_ps_thread, "Tourney Stats")
+        # opens a tourney player stats tab
+        new_tps_thread = GuiTourneyPlayerStats.GuiTourneyPlayerStats(self.db, self)
+        self.threads.append(new_tps_thread)
+        self.add_and_display_tab(new_tps_thread, "Tourney Stats")
 
     def tab_tourney_graph_viewer(self):
-        # opens a graph viewer tab
-        new_gv_thread = GuiTourneyGraphViewer.GuiTourneyGraphViewer(self.db, self)
-        self.threads.append(new_gv_thread)
-        self.add_and_display_tab(new_gv_thread, "Tourney Graphs")
+        # opens a tourney graph viewer tab
+        new_tgv_thread = GuiTourneyGraphViewer.GuiTourneyGraphViewer(self.db, self)
+        self.threads.append(new_tgv_thread)
+        self.add_and_display_tab(new_tgv_thread, "Tourney Graphs")
+
+    def tab_cash_player_stats(self):
+        # opens a cash player stats tab
+        new_cps_thread = GuiCashPlayerStats.GuiCashPlayerStats(self.db, self)
+        self.threads.append(new_cps_thread)
+        self.add_and_display_tab(new_cps_thread, "Cash Stats")
+
+    def tab_cash_graph_viewer(self):
+        # opens a cash graph viewer tab
+        new_cgv_thread = GuiCashGraphViewer.GuiCashGraphViewer(self.db, self)
+        self.threads.append(new_cgv_thread)
+        self.add_and_display_tab(new_cgv_thread, "Cash Graphs")
+
+    def tab_cash_session_viewer(self):
+        # opens a cash session viewer tab
+        new_csv_thread = GuiCashSessionViewer.GuiCashSessionViewer(self.db, self)
+        self.threads.append(new_csv_thread)
+        self.add_and_display_tab(new_csv_thread, "Cash Sessions")
 
     def close_tab(self, index):
         item = self.nb.widget(index)

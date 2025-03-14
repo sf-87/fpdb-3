@@ -15,6 +15,7 @@ class Filters(QWidget):
         self.start_date = QDateEdit(START_DATE)
         self.end_date = QDateEdit(END_DATE)
         self.tourney_buy_ins = {}
+        self.stakes = {}
 
         self.setLayout(QVBoxLayout())
         self.setStyleSheet("QPushButton {padding-left:5;padding-right:5;padding-top:2;padding-bottom:2;}")
@@ -23,6 +24,9 @@ class Filters(QWidget):
     def make_filter(self):
         if self.display.get("TourneyBuyIn", False):
             self.layout().addWidget(self.create_tourney_buy_in_frame())
+
+        if self.display.get("Stakes", False):
+            self.layout().addWidget(self.create_stakes_frame())
 
         if self.display.get("Dates", False):
             self.layout().addWidget(self.create_date_frame())
@@ -49,6 +53,9 @@ class Filters(QWidget):
 
     def get_tourney_buy_ins(self):
         return [g for g in self.tourney_buy_ins if self.tourney_buy_ins[g].isChecked()]
+
+    def get_stakes(self):
+        return [g for g in self.stakes if self.stakes[g].isChecked()]
 
     def get_dates(self):
         offset = self.db.day_start * 3600
@@ -144,3 +151,23 @@ class Filters(QWidget):
                 self.start_date.setDate(new_date)
 
         dlg.accept()
+
+    def create_stakes_frame(self):
+        stakes_frame = QGroupBox("Stakes:")
+        self.fill_stakes_frame(stakes_frame)
+        return stakes_frame
+
+    def fill_stakes_frame(self, frame):
+        vbox = QVBoxLayout()
+        frame.setLayout(vbox)
+
+        result = self.db.get_stakes()
+
+        if len(result) >= 1:
+            for sb, bb in result:
+                display_text = f"{sb:.2f}/{bb:.2f}"
+                value = f"{sb},{bb}"
+
+                self.stakes[value] = QCheckBox(display_text)
+                self.stakes[value].setChecked(True)
+                vbox.addWidget(self.stakes[value])
