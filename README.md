@@ -6,4 +6,4 @@
 
 A lighter project based on fpdb python3 adaptation of MegaphoneJon and update from ChazDazzle and jejellyroll-fr
 (tx to all previous contribs).
-It is designed only for SnG/MTT on PokerStars using Windows os.
+It is designed only for No Limit Hold'em Cash/SnG/MTT on PokerStars using Windows os.

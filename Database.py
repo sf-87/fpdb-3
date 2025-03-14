@@ -1,3 +1,4 @@
+from decimal import Decimal
 import logging
 import os
 import sqlalchemy.pool as pool
@@ -10,6 +11,9 @@ import SQL
 # logging has been set up in fpdb.py or HUD_main.py, use their settings:
 log = logging.getLogger("db")
 
+def adapt_decimal(d):
+    return str(d)
+
 # Keys used to index into player data in insert_hand_players.
 HAND_PLAYERS_KEYS = [
     "startStack",
@@ -19,6 +23,9 @@ HAND_PLAYERS_KEYS = [
     "seatNo",
     "card1",
     "card2",
+    "startingHand",
+    "winnings",
+    "totalProfit",
     "street0VPIChance",
     "street0VPI",
     "street0AggrChance",
@@ -141,6 +148,7 @@ class Database(object):
         if os.path.exists(self.db_path):
             self.connection = sqlite3.connect(self.db_path, detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
             self.is_connected = True
+            sqlite3.register_adapter(Decimal, adapt_decimal)
             self.cursor = self.connection.cursor()
             self.cursor.execute("PRAGMA temp_store=2")  # use memory for temp tables/indexes
             self.cursor.execute("PRAGMA journal_mode=WAL")  # use memory for temp tables/indexes
@@ -180,24 +188,6 @@ class Database(object):
         self.cursor.execute(self.sql.query["getTableInfo"], [hand_id])
         return list(self.cursor.fetchone())
 
-    def get_game_type(self, hand_id):
-        self.cursor.execute(self.sql.query["getGameType"], [hand_id])
-        row = self.cursor.fetchone()
-
-        if row is None:
-            log.error(f"No game type found for hand ID {hand_id}")
-            return None
-
-        game_type = {
-            "id": row[0],
-            "smallBlind": row[1],
-            "bigBlind": row[2],
-            "maxSeats": row[3],
-            "ante": row[4]
-        }
-
-        return game_type
-
     def get_hand_count(self):
         self.cursor.execute(self.sql.query["getHandsCount"])
         return self.cursor.fetchone()[0]
@@ -210,33 +200,28 @@ class Database(object):
         self.cursor.execute(self.sql.query["getTourneyTypesCount"])
         return self.cursor.fetchone()[0]
 
-    def get_stats_from_hand(self, hand_id, hud_params, num_seats):
-        agg_bb_mult = hud_params.agg_bb_mult
-        seats_style = hud_params.seats_style
+    def get_stats_from_hand(self, hand_id, hud_params, num_seats, table_type):
+        if table_type == "tour":
+            agg_bb_mult = hud_params.tour_agg_bb_mult
+            seats_style = hud_params.tour_seats_style
+        else:
+            agg_bb_mult = hud_params.cash_agg_bb_mult
+            seats_style = hud_params.cash_seats_style
 
         stat_dict = {}
 
         if seats_style == "A":
-            seats_min, seats_max = 0, 10
+            seats_min, seats_max = 0, 9
         elif seats_style == "E":
             seats_min, seats_max = num_seats, num_seats
         else:
-            seats_min, seats_max = 0, 10
+            seats_min, seats_max = 0, 9
             log.warning(f"Bad seats_style value: {seats_style}")
-
-        # lookup gameTypeId from hand
-        game_type = self.get_game_type(hand_id)
-
-        if game_type is None:
-            return stat_dict  # Return an empty stat_dict if no game type is found
-
-        game_type_id = game_type["id"]
 
         data = [
             hand_id,
             agg_bb_mult,
             agg_bb_mult,
-            game_type_id,
             seats_min,
             seats_max
         ]
@@ -423,8 +408,10 @@ class Database(object):
 
     def get_game_type_id(self, game):
         data = (
-            int(game["sb"]),
-            int(game["bb"]),
+            game["type"],
+            game["currency"],
+            Decimal(game["sb"]),
+            Decimal(game["bb"]),
             game["maxSeats"],
             int(game["ante"])
         )
@@ -520,4 +507,32 @@ class Database(object):
         q = self.sql.query["getTourneyGraphStats"]
         q = q.replace("<tourneyBuyIns>", tourney_buy_ins if tourney_buy_ins != "" else "1 = 0")
         self.cursor.execute(q, [start_date, end_date])
+        return self.cursor.fetchall()
+
+    def get_cash_player_detailed_stats(self, start_date, end_date, stakes):
+        q = self.sql.query["getCashDetailedStats"]
+        q = q.replace("<stakes>", stakes if stakes != "" else "1 = 0")
+        self.cursor.execute(q, [start_date, end_date, self.get_hero_id()])
+        return self.cursor.fetchall()
+
+    def get_cash_hands_player_detailed_stats(self, start_date, end_date, stakes):
+        q = self.sql.query["getCashHandsDetailedStats"]
+        q = q.replace("<stakes>", stakes if stakes != "" else "1 = 0")
+        self.cursor.execute(q, [start_date, end_date, self.get_hero_id()])
+        return self.cursor.fetchall()
+
+    def get_stakes(self):
+        self.cursor.execute(self.sql.query["getStakes"])
+        return self.cursor.fetchall()
+
+    def get_cash_player_graph_stats(self, start_date, end_date, stakes):
+        q = self.sql.query["getCashGraphStats"]
+        q = q.replace("<stakes>", stakes if stakes != "" else "1 = 0")
+        self.cursor.execute(q, [start_date, end_date, self.get_hero_id()])
+        return self.cursor.fetchall()
+
+    def get_cash_player_sessions_stats(self, start_date, end_date, stakes):
+        q = self.sql.query["getCashSessionStats"]
+        q = q.replace("<stakes>", stakes if stakes != "" else "1 = 0")
+        self.cursor.execute(q, [start_date, end_date, self.get_hero_id()])
         return self.cursor.fetchall()

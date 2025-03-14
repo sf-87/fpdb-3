@@ -25,14 +25,15 @@ else:
 
 if INSTALL_METHOD == "exe":
     FPDB_ROOT_PATH = os.path.dirname(sys.executable)
+    GRAPHICS_PATH = os.path.join(FPDB_ROOT_PATH, "_internal")
 else:
     FPDB_ROOT_PATH = os.getcwd()
+    GRAPHICS_PATH = FPDB_ROOT_PATH
 
 APPDATA_PATH = os.getenv("APPDATA")
 CONFIG_PATH = os.path.join(APPDATA_PATH, "fpdb")
 LOG_PATH = os.path.join(CONFIG_PATH, "log")
 DB_PATH = os.path.join(CONFIG_PATH, "database")
-GRAPHICS_PATH = os.path.join(FPDB_ROOT_PATH, "gfx")
 
 log = None
 
@@ -114,8 +115,10 @@ class Import(object):
 
 class HudUI(object):
     def __init__(self, node):
-        self.agg_bb_mult = float(node.getAttribute("aggregation_level_multiplier"))
-        self.seats_style = node.getAttribute("seats_style")
+        self.tour_agg_bb_mult = float(node.getAttribute("tour_aggregation_level_multiplier"))
+        self.tour_seats_style = node.getAttribute("tour_seats_style")
+        self.cash_agg_bb_mult = float(node.getAttribute("cash_aggregation_level_multiplier"))
+        self.cash_seats_style = node.getAttribute("cash_seats_style")
         self.label = node.getAttribute("label")
         self.hud_menu_x_shift = int(node.getAttribute("hud_menu_x_shift"))
         self.hud_menu_y_shift = int(node.getAttribute("hud_menu_y_shift"))

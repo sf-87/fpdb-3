@@ -221,42 +221,43 @@ class HUD_main(QObject):
                     log.error(f"Database error while processing hand {hand_id}: {e}")
                     return
 
-        tourney_no, table_name, max_seats, num_seats = table_info
+        tourney_no, table_name, table_type, max_seats, num_seats = table_info
 
         # Managing table changes for tournaments
-        if table_name in self.hud_dict:
-            if self.hud_dict[table_name].table.has_table_title_changed():
-                log.debug("Table has been renamed")
-                self.table_is_stale(self.hud_dict[table_name])
-                return
-        else:
-            for k in list(self.hud_dict.keys()):
-                log.debug("Check if the tournament number is in the hud_dict under a different table")
+        if table_type == "tour":
+            if table_name in self.hud_dict:
+                if self.hud_dict[table_name].table.has_table_title_changed():
+                    log.debug("Table has been renamed")
+                    self.table_is_stale(self.hud_dict[table_name])
+                    return
+            else:
+                for k in list(self.hud_dict.keys()):
+                    log.debug("Check if the tournament number is in the hud_dict under a different table")
 
-                if k.startswith(f"Tournament {tourney_no}"):
-                    self.table_is_stale(self.hud_dict[k])
-                    continue
+                    if k.startswith(f"Tournament {tourney_no}"):
+                        self.table_is_stale(self.hud_dict[k])
+                        continue
 
-        # Detection of max_seats changes
-        if table_name in self.hud_dict:
-            with contextlib.suppress(Exception):
-                new_max = self.hud_dict[table_name].new_max_seats
+            # Detection of max_seats changes
+            if table_name in self.hud_dict:
+                with contextlib.suppress(Exception):
+                    new_max = self.hud_dict[table_name].new_max_seats
 
-                if new_max is not None and self.hud_dict[table_name].max_seats != new_max:
-                    log.debug("Going to kill_hud due to max seats change")
-                    self.kill_hud(table_name)
+                    if new_max is not None and self.hud_dict[table_name].max_seats != new_max:
+                        log.debug("Going to kill_hud due to max seats change")
+                        self.kill_hud(table_name)
 
-                    while table_name in self.hud_dict:
-                        time.sleep(0.5)
+                        while table_name in self.hud_dict:
+                            time.sleep(0.5)
 
-                    max_seats = new_max
+                        max_seats = new_max
 
-                self.hud_dict[table_name].new_max_seats = None
+                    self.hud_dict[table_name].new_max_seats = None
 
         # Updating or creating the HUD
         if table_name in self.hud_dict:
             log.debug(f"Update HUD for hand {hand_id}")
-            stat_dict = self.db.get_stats_from_hand(hand_id, self.hud_dict[table_name].hud_params, num_seats)
+            stat_dict = self.db.get_stats_from_hand(hand_id, self.hud_dict[table_name].hud_params, num_seats, table_type)
             log.debug(f"Got stats for hand {hand_id}")
 
             self.hud_dict[table_name].stat_dict = stat_dict
@@ -266,7 +267,7 @@ class HUD_main(QObject):
             log.debug(f"HUD updated for table {table_name} and hand {hand_id}")
         else:
             log.debug(f"Create new HUD for hand {hand_id}")
-            stat_dict = self.db.get_stats_from_hand(hand_id, self.hud_params, num_seats)
+            stat_dict = self.db.get_stats_from_hand(hand_id, self.hud_params, num_seats, table_type)
             log.debug(f"Got stats for hand {hand_id}")
 
             table_window = TableWindow.TableWindow(table_name, max_seats, tourney_no)

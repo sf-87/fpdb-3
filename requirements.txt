@@ -1,5 +1,6 @@
 cachetools ==5.5.0
 matplotlib ==3.10.0
+mplfinance ==0.12.10b0
 PyQt5      ==5.15.11
 pyinstaller==6.9.0
 pywin32    ==308

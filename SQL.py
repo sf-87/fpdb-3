@@ -30,8 +30,10 @@ class Sql(object):
 
         self.query["createGameTypesTable"] = """CREATE TABLE GameTypes (
                     id INTEGER PRIMARY KEY NOT NULL,
-                    smallBlind INTEGER NOT NULL,
-                    bigBlind INTEGER NOT NULL,
+                    type TEXT NOT NULL,
+                    currency TEXT NOT NULL,
+                    smallBlind REAL NOT NULL,
+                    bigBlind REAL NOT NULL,
                     maxSeats INTEGER NOT NULL,
                     ante INTEGER NOT NULL)"""
 
@@ -84,7 +86,7 @@ class Sql(object):
                     id INTEGER PRIMARY KEY NOT NULL,
                     tableName TEXT NOT NULL,
                     handNo INTEGER NOT NULL,
-                    tourneyId INTEGER NOT NULL,
+                    tourneyId INTEGER,
                     gameTypeId INTEGER NOT NULL,
                     fileId INTEGER NOT NULL,
                     startTime TEXT NOT NULL,
@@ -95,7 +97,6 @@ class Sql(object):
                     boardCard3 TEXT,
                     boardCard4 TEXT,
                     boardCard5 TEXT,
-                    playersVPI INTEGER NOT NULL,
                     FOREIGN KEY (tourneyId) REFERENCES Tourneys (id),
                     FOREIGN KEY (gameTypeId) REFERENCES GameTypes (id),
                     FOREIGN KEY (fileId) REFERENCES Files (id))"""
@@ -108,13 +109,16 @@ class Sql(object):
                     id INTEGER PRIMARY KEY NOT NULL,
                     handId INTEGER NOT NULL,
                     playerId INTEGER NOT NULL,
-                    startStack INTEGER NOT NULL,
+                    startStack REAL NOT NULL,
                     startBounty REAL,
                     endBounty REAL,
                     position TEXT NOT NULL,
                     seatNo INTEGER NOT NULL,
                     card1 TEXT,
                     card2 TEXT,
+                    startingHand TEXT,
+                    winnings REAL NOT NULL,
+                    totalProfit REAL NOT NULL,
                     street0VPIChance INTEGER NOT NULL,
                     street0VPI INTEGER NOT NULL,
                     street0AggrChance INTEGER NOT NULL,
@@ -172,7 +176,7 @@ class Sql(object):
                     playerId INTEGER NOT NULL,
                     street TEXT NOT NULL,
                     action TEXT NOT NULL,
-                    amount INTEGER NOT NULL,
+                    amount REAL NOT NULL,
                     allIn INTEGER NOT NULL,
                     FOREIGN KEY (handId) REFERENCES Hands (id),
                     FOREIGN KEY (playerId) REFERENCES Players (id))"""
@@ -254,12 +258,6 @@ class Sql(object):
         self.query["getTourneyTypesCount"] = "SELECT COUNT(*) FROM TourneyTypes"
 
         ####################################
-        # Select basic info
-        ####################################
-
-        self.query["getBuyIns"] = "SELECT DISTINCT buyIn, fee FROM TourneyTypes ORDER BY buyIn, fee"
-
-        ####################################
         # Queries for Files table
         ####################################
 
@@ -281,15 +279,11 @@ class Sql(object):
         # Queries for GameTypes table
         ####################################
 
-        self.query["getGameTypeId"] = "SELECT id FROM GameTypes WHERE smallBlind = ? AND bigBlind = ? AND maxSeats = ? AND ante = ?"
+        self.query["getStakes"] = "SELECT DISTINCT smallBlind, bigBlind FROM GameTypes WHERE type = 'cash' ORDER BY smallBlind, bigBlind"
 
-        self.query["insertGameType"] = "INSERT INTO GameTypes (smallBlind, bigBlind, maxSeats, ante) VALUES (?, ?, ?, ?)"
+        self.query["getGameTypeId"] = "SELECT id FROM GameTypes WHERE type = ? AND currency = ? AND smallBlind = ? AND bigBlind = ? AND maxSeats = ? AND ante = ?"
 
-        self.query["getGameType"] = """SELECT gt.*
-                                       FROM Hands h
-                                       INNER JOIN GameTypes gt
-                                       ON gt.id = h.gameTypeId
-                                       WHERE h.id = ?"""
+        self.query["insertGameType"] = "INSERT INTO GameTypes (type, currency, smallBlind, bigBlind, maxSeats, ante) VALUES (?, ?, ?, ?, ?, ?)"
 
         ####################################
         # Queries for Players table
@@ -314,6 +308,8 @@ class Sql(object):
                                             AND speed = ?
                                             AND private = ?
                                             AND sng = ?"""
+
+        self.query["getBuyIns"] = "SELECT DISTINCT buyIn, fee FROM TourneyTypes ORDER BY buyIn, fee"
 
         self.query["insertTourneyType"] = """INSERT INTO TourneyTypes (currency, buyIn, fee, maxSeats, knockout, koBounty, speed, private, sng)
                                              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"""
@@ -341,11 +337,12 @@ class Sql(object):
 
         self.query["insertHand"] = """INSERT INTO Hands (tableName, handNo, tourneyId, gameTypeId, fileId, startTime,
                                                          seats, heroSeat, boardCard1, boardCard2, boardCard3, boardCard4,
-                                                         boardCard5, playersVPI)
-                                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""
+                                                         boardCard5)
+                                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""
 
         self.query["getTableInfo"] = """SELECT t.tourneyNo,
                                                h.tableName,
+                                               gt.type,
                                                gt.maxSeats,
                                                COUNT(*)
                                         FROM Hands h
@@ -353,27 +350,27 @@ class Sql(object):
                                         ON gt.id = h.gameTypeId
                                         INNER JOIN HandPlayers hp
                                         ON hp.handId = h.id
-                                        INNER JOIN Tourneys t
+                                        LEFT JOIN Tourneys t
                                         ON t.id = h.tourneyId
                                         WHERE h.id = ?
-                                        GROUP BY h.tableName,
-                                                 gt.maxSeats"""
+                                        GROUP BY t.tourneyNo, h.tableName, gt.type, gt.maxSeats"""
 
         ####################################
         # Queries for HandPlayers table
         ####################################
 
         self.query["insertHandPlayer"] = """INSERT INTO HandPlayers (handId, playerId, startStack, startBounty, endBounty, position,
-                                                                     seatNo, card1, card2, street0VPIChance, street0VPI, street0AggrChance,
-                                                                     street0Aggr, street0TBChance, street0TBDone, street0FBChance, street0FBDone, street0FoldTo3BChance,
-                                                                     street0FoldTo3BDone, street0FoldTo4BChance, street0FoldTo4BDone, raiseToStealChance, raiseToStealDone, stealChance,
-                                                                     stealDone, otherRaisedStreet1, otherRaisedStreet2, otherRaisedStreet3, foldToOtherRaisedStreet1, foldToOtherRaisedStreet2,
-                                                                     foldToOtherRaisedStreet3, foldBBToStealChance, foldedBBToSteal, foldSBToStealChance, foldedSBToSteal, street1CBChance,
-                                                                     street1CBDone, street2CBChance, street2CBDone, street3CBChance, street3CBDone, foldToStreet1CBChance,
-                                                                     foldToStreet1CBDone, foldToStreet2CBChance, foldToStreet2CBDone, foldToStreet3CBChance, foldToStreet3CBDone, street1CheckRaiseChance,
-                                                                     street1CheckRaiseDone, street2CheckRaiseChance, street2CheckRaiseDone, street3CheckRaiseChance, street3CheckRaiseDone)
-                                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                                                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""
+                                                                     seatNo, card1, card2, startingHand, winnings, totalProfit,
+                                                                     street0VPIChance, street0VPI, street0AggrChance, street0Aggr, street0TBChance, street0TBDone,
+                                                                     street0FBChance, street0FBDone, street0FoldTo3BChance, street0FoldTo3BDone, street0FoldTo4BChance, street0FoldTo4BDone,
+                                                                     raiseToStealChance, raiseToStealDone, stealChance, stealDone, otherRaisedStreet1, otherRaisedStreet2,
+                                                                     otherRaisedStreet3, foldToOtherRaisedStreet1, foldToOtherRaisedStreet2, foldToOtherRaisedStreet3, foldBBToStealChance, foldedBBToSteal,
+                                                                     foldSBToStealChance, foldedSBToSteal, street1CBChance, street1CBDone, street2CBChance, street2CBDone,
+                                                                     street3CBChance, street3CBDone, foldToStreet1CBChance, foldToStreet1CBDone, foldToStreet2CBChance, foldToStreet2CBDone,
+                                                                     foldToStreet3CBChance, foldToStreet3CBDone, street1CheckRaiseChance, street1CheckRaiseDone, street2CheckRaiseChance, street2CheckRaiseDone,
+                                                                     street3CheckRaiseChance, street3CheckRaiseDone)
+                                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                                                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""
 
         ####################################
         # Queries for HandActions table
@@ -511,9 +508,11 @@ class Sql(object):
                                                               SELECT gt2.id
                                                               FROM GameTypes gt1
                                                               INNER JOIN GameTypes gt2
-                                                              ON gt2.bigBlind <= gt1.bigBlind * ?
+                                                              ON gt2.type = gt1.type
+                                                              AND gt2.currency = gt1.currency
+                                                              AND gt2.bigBlind <= gt1.bigBlind * ?
                                                               AND gt2.bigBlind >= gt1.bigBlind / ?
-                                                              WHERE gt1.id = ?
+                                                              WHERE gt1.id = h.gameTypeId
                                                             )
                                        AND hc.seats BETWEEN ? AND ?
                                        GROUP BY hc.playerId, p.name, hp.seatNo
@@ -551,7 +550,7 @@ class Sql(object):
                                                    GROUP BY t.tourneyTypeId
                                                    ORDER BY tt.sng DESC, tt.buyIn, tt.fee, tt.maxSeats, tt.knockout"""
 
-        self.query["getTourneyGraphStats"] = """SELECT COALESCE(t.winnings, 0) + t.bounties - tt.buyIn - tt.fee
+        self.query["getTourneyGraphStats"] = """SELECT printf("%.2f", COALESCE(t.winnings, 0) + t.bounties - tt.buyIn - tt.fee)
                                                 FROM Tourneys t
                                                 INNER JOIN TourneyTypes tt
                                                 ON tt.id = t.tourneyTypeId
@@ -559,3 +558,82 @@ class Sql(object):
                                                 AND t.startTime < ?
                                                 AND (<tourneyBuyIns>)
                                                 ORDER BY t.startTime"""
+
+        ####################################
+        # Queries for Cash Stats
+        ####################################
+
+        self.query["getCashDetailedStats"] = """SELECT printf("%.2f/%.2f", gt.smallBlind, gt.bigBlind)                                                                                                          AS stakes,
+                                                       printf("%d", COUNT(1))                                                                                                                                   AS handCount,
+                                                       CASE WHEN SUM(hp.street0VPIChance) = 0 THEN NULL ELSE printf("%.1f", (CAST(SUM(hp.street0VPI) AS REAL) / SUM(hp.street0VPIChance)) * 100) END            AS vpip,
+                                                       CASE WHEN SUM(hp.street0AggrChance) = 0 THEN NULL ELSE printf("%.1f", (CAST(SUM(hp.street0Aggr) AS REAL) / SUM(hp.street0AggrChance)) * 100) END         AS pfr,
+                                                       CASE WHEN SUM(hp.street0TBChance) = 0 THEN NULL ELSE printf("%.1f", (CAST(SUM(hp.street0TBDone) AS REAL) / SUM(hp.street0TBChance)) * 100) END           AS tb_0,
+                                                       CASE WHEN SUM(hp.street0FBChance) = 0 THEN NULL ELSE printf("%.1f", (CAST(SUM(hp.street0FBDone) AS REAL) / SUM(hp.street0FBChance)) * 100) END           AS fb_0,
+                                                       CASE WHEN SUM(hp.stealChance) = 0 THEN NULL ELSE printf("%.1f", (CAST(SUM(hp.stealDone) AS REAL) / SUM(hp.stealChance)) * 100) END                       AS steal,
+                                                       CASE WHEN SUM(hp.foldBBToStealChance) = 0 THEN NULL ELSE printf("%.1f", (CAST(SUM(hp.foldedBBToSteal) AS REAL) / SUM(hp.foldBBToStealChance)) * 100) END AS bb_stolen,
+                                                       CASE WHEN SUM(hp.foldSBToStealChance) = 0 THEN NULL ELSE printf("%.1f", (CAST(SUM(hp.foldedSBToSteal) AS REAL) / SUM(hp.foldSBToStealChance)) * 100) END AS sb_stolen,
+                                                       CASE WHEN SUM(hp.raiseToStealChance) = 0 THEN NULL ELSE printf("%.1f", (CAST(SUM(hp.raiseToStealDone) AS REAL) / SUM(hp.raiseToStealChance)) * 100) END  AS rts,
+                                                       printf("%.2f", SUM(hp.totalProfit))                                                                                                                      AS net
+                                                FROM Hands h
+                                                INNER JOIN GameTypes gt
+                                                ON gt.id = h.gameTypeId
+                                                AND gt.type = 'cash'
+                                                INNER JOIN HandPlayers hp
+                                                ON hp.handId = h.id
+                                                WHERE h.startTime > ?
+                                                AND h.startTime < ?
+                                                AND hp.playerId = ?
+                                                AND (<stakes>)
+                                                GROUP BY gt.smallBlind, gt.bigBlind
+                                                ORDER BY gt.smallBlind, gt.bigBlind"""
+
+        self.query["getCashHandsDetailedStats"] = """SELECT hp.startingHand                                                                                                                                          AS startingHand,
+                                                            printf("%d", COUNT(1))                                                                                                                                   AS handCount,
+                                                            CASE WHEN SUM(hp.street0VPIChance) = 0 THEN NULL ELSE printf("%.1f", (CAST(SUM(hp.street0VPI) AS REAL) / SUM(hp.street0VPIChance)) * 100) END            AS vpip,
+                                                            CASE WHEN SUM(hp.street0AggrChance) = 0 THEN NULL ELSE printf("%.1f", (CAST(SUM(hp.street0Aggr) AS REAL) / SUM(hp.street0AggrChance)) * 100) END         AS pfr,
+                                                            CASE WHEN SUM(hp.street0TBChance) = 0 THEN NULL ELSE printf("%.1f", (CAST(SUM(hp.street0TBDone) AS REAL) / SUM(hp.street0TBChance)) * 100) END           AS tb_0,
+                                                            CASE WHEN SUM(hp.street0FBChance) = 0 THEN NULL ELSE printf("%.1f", (CAST(SUM(hp.street0FBDone) AS REAL) / SUM(hp.street0FBChance)) * 100) END           AS fb_0,
+                                                            CASE WHEN SUM(hp.stealChance) = 0 THEN NULL ELSE printf("%.1f", (CAST(SUM(hp.stealDone) AS REAL) / SUM(hp.stealChance)) * 100) END                       AS steal,
+                                                            CASE WHEN SUM(hp.foldBBToStealChance) = 0 THEN NULL ELSE printf("%.1f", (CAST(SUM(hp.foldedBBToSteal) AS REAL) / SUM(hp.foldBBToStealChance)) * 100) END AS bb_stolen,
+                                                            CASE WHEN SUM(hp.foldSBToStealChance) = 0 THEN NULL ELSE printf("%.1f", (CAST(SUM(hp.foldedSBToSteal) AS REAL) / SUM(hp.foldSBToStealChance)) * 100) END AS sb_stolen,
+                                                            CASE WHEN SUM(hp.raiseToStealChance) = 0 THEN NULL ELSE printf("%.1f", (CAST(SUM(hp.raiseToStealDone) AS REAL) / SUM(hp.raiseToStealChance)) * 100) END  AS rts,
+                                                            printf("%.2f", SUM(hp.totalProfit))                                                                                                                      AS net
+                                                     FROM Hands h
+                                                     INNER JOIN GameTypes gt
+                                                     ON gt.id = h.gameTypeId
+                                                     AND gt.type = 'cash'
+                                                     INNER JOIN HandPlayers hp
+                                                     ON hp.handId = h.id
+                                                     WHERE h.startTime > ?
+                                                     AND h.startTime < ?
+                                                     AND hp.playerId = ?
+                                                     AND (<stakes>)
+                                                     GROUP BY hp.startingHand"""
+
+        self.query["getCashGraphStats"] = """SELECT printf("%.2f", hp.totalProfit)
+                                             FROM Hands h
+                                             INNER JOIN GameTypes gt
+                                             ON gt.id = h.gameTypeId
+                                             AND gt.type = 'cash'
+                                             INNER JOIN HandPlayers hp
+                                             ON hp.handId = h.id
+                                             WHERE h.startTime > ?
+                                             AND h.startTime < ?
+                                             AND hp.playerId = ?
+                                             AND (<stakes>)
+                                             ORDER BY h.startTime"""
+
+        self.query["getCashSessionStats"] = """SELECT h.startTime,
+                                                      strftime('%s', replace(h.startTime, '/', '-')),
+                                                      printf("%.2f", hp.totalProfit)
+                                               FROM Hands h
+                                               INNER JOIN GameTypes gt
+                                               ON gt.id = h.gameTypeId
+                                               AND gt.type = 'cash'
+                                               INNER JOIN HandPlayers hp
+                                               ON hp.handId = h.id
+                                               WHERE h.startTime > ?
+                                               AND h.startTime < ?
+                                               AND hp.playerId = ?
+                                               AND (<stakes>)
+                                               ORDER BY h.startTime"""

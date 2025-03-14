@@ -291,7 +291,7 @@ class Importer(object):
         QCoreApplication.processEvents()
 
     def __del__(self):
-        if hasattr(self, "zmq_sender"):
+        if self.zmq_sender is not None:
             self.zmq_sender.close()
 
 class ImportProgressDialog(QDialog):
