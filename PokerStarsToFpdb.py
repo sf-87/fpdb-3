@@ -35,7 +35,7 @@ RE_GAME_INFO = re.compile(
 RE_DATE_TIME = re.compile(r"(?P<Y>\d{4})\/(?P<M>\d{2})\/(?P<D>\d{2})[\- ]+(?P<H>\d{1,2}):(?P<MIN>\d{2}):(?P<S>\d{2})")
 RE_HAND_INFO = re.compile(r"Table\s\'(?P<TABLE>.+?)\'\s((?P<MAX>\d+)-max)")
 RE_BUTTON = re.compile(r"Seat #(?P<BUTTON>\d+) is the button")
-RE_PLAYER_INFO = re.compile(r"Seat\s(?P<SEAT>\d+):\s%(PLYR)s\s\((?:%(LS)s)?(?P<CASH>[.\d]+)\sin\schips(?:,\s%(LS)s(?P<BOUNTY>[.\d]+)\sbounty)?\)(?P<SITOUT>\sis\ssitting\sout)?" % SUBSTITUTIONS)
+RE_PLAYER_INFO = re.compile(r"Seat\s(?P<SEAT>\d+):\s%(PLYR)s\s\((?:%(LS)s)?(?P<CASH>[.\d]+)\sin\schips(?:,\s%(LS)s(?P<BOUNTY>[.\d]+)\sbounty)?\)(?P<SITOUT>\sis\ssitting\sout)?(?P<OUTHAND>\sout\sof\shand)?" % SUBSTITUTIONS)
 RE_ANTES = re.compile(r"%(PLYR)s:\sposts\sthe\sante\s(?P<ANTE>\d+)" % SUBSTITUTIONS)
 RE_POST_SB = re.compile(r"%(PLYR)s:\sposts\ssmall\sblind\s(?:%(LS)s)?(?P<SB>[.\d]+)" % SUBSTITUTIONS)
 RE_POST_BB = re.compile(r"%(PLYR)s:\sposts\sbig\sblind\s(?:%(LS)s)?(?P<BB>[.\d]+)" % SUBSTITUTIONS)
@@ -218,7 +218,7 @@ class PokerStars(object):
 
     def read_player_stacks(self, hand):
         for m in RE_PLAYER_INFO.finditer(hand.hand_text):
-            if hand.game_type["type"] == "tour" or m.group("SITOUT") is None:
+            if (hand.game_type["type"] == "tour" and m.group("OUTHAND") is None) or (hand.game_type["type"] == "cash" and m.group("SITOUT") is None):
                 hand.add_player(
                     int(m.group("SEAT")),
                     m.group("PNAME"),
