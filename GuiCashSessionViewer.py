@@ -1,3 +1,4 @@
+from datetime import datetime
 from decimal import Decimal
 import matplotlib
 from matplotlib.backends.backend_qt5agg import FigureCanvas
@@ -17,7 +18,7 @@ class GuiCashSessionViewer(QSplitter):
     def __init__(self, db, parent):
         super().__init__(parent)
         self.db = db
-        self.columns = ["Session", "Hands", "Start", "End", "Open", "Close", "Low", "High", "Range", "Profit"]
+        self.columns = ["Session", "Hands", "Start", "End", "Open", "Close", "Low", "High", "Range", "Profit", "\u20ac/h"]
         self.colors = {'background': '#31363b', 'foreground': '#ffffff', 'grid': '#444444', "line_up": "g", "line_down": "r"}
         self.fig = None
         self.canvas = None
@@ -145,6 +146,7 @@ class GuiCashSessionViewer(QSplitter):
         global_open = None
         global_lower = 0
         global_higher = 0
+        global_time_played = 0
 
         for i in range(len(index[0])):
             last_idx = index[0][i]
@@ -158,7 +160,10 @@ class GuiCashSessionViewer(QSplitter):
                 lower = min(cum_sum[first_idx:last_idx + 1])
                 open = sum(profits[:first_idx])
                 close = sum(profits[:last_idx + 1])
+                time_played = datetime.strptime(end_time, "%Y/%m/%d %H:%M:%S") - datetime.strptime(start_time, "%Y/%m/%d %H:%M:%S")
+                won_hourly = won / time_played.seconds * 3600
                 total_hands += session_hands
+                global_time_played += time_played.seconds
 
                 if global_lower > lower:
                     global_lower = lower
@@ -181,7 +186,8 @@ class GuiCashSessionViewer(QSplitter):
                         f"{lower:.2f}",
                         f"{higher:.2f}",
                         f"{higher - lower:.2f}",
-                        f"{won:.2f}"
+                        f"{won:.2f}",
+                        f"{won_hourly:.2f}"
                     ]
                 )
                 quotes.append([session_id, open, close, higher, lower])
@@ -190,7 +196,7 @@ class GuiCashSessionViewer(QSplitter):
 
         global_close = close
         global_end_time = end_time
-        result.append([""] * 10)
+        result.append([""] * 11)
         result.append(
             [
                 "All",
@@ -202,7 +208,8 @@ class GuiCashSessionViewer(QSplitter):
                 f"{global_lower:.2f}",
                 f"{global_higher:.2f}",
                 f"{global_higher - global_lower:.2f}",
-                f"{global_close - global_open:.2f}"
+                f"{global_close - global_open:.2f}",
+                f"{(global_close - global_open) / global_time_played * 3600:.2f}"
             ]
         )
 

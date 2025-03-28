@@ -12,7 +12,7 @@ class GuiCashPlayerStats(QSplitter):
     def __init__(self, db, parent):
         super().__init__(parent)
         self.db = db
-        self.columns = ["Stakes", "#", "VPIP", "PFR", "PF3Bet", "PF4Bet", "Steal", "BBStol", "SBStol", "RTS", "Net"]
+        self.columns = ["Stakes", "#", "VPIP", "PFR", "PF3Bet", "PF4Bet", "Steal", "BBStol", "SBStol", "RTS", "Net", "BB/100"]
         self.hands_columns = ["Hand", "#", "VPIP", "PFR", "PF3Bet", "PF4Bet", "Steal", "BBStol", "SBStol", "RTS", "Net"]
         self.filters = Filters.Filters(db, { "Stakes": True, "Dates": True, "Button": True })
         self.filters.register_button_name("Refresh Stats")

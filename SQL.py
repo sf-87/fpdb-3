@@ -573,7 +573,8 @@ class Sql(object):
                                                        CASE WHEN SUM(hp.foldBBToStealChance) = 0 THEN NULL ELSE printf("%.1f", (CAST(SUM(hp.foldedBBToSteal) AS REAL) / SUM(hp.foldBBToStealChance)) * 100) END AS bb_stolen,
                                                        CASE WHEN SUM(hp.foldSBToStealChance) = 0 THEN NULL ELSE printf("%.1f", (CAST(SUM(hp.foldedSBToSteal) AS REAL) / SUM(hp.foldSBToStealChance)) * 100) END AS sb_stolen,
                                                        CASE WHEN SUM(hp.raiseToStealChance) = 0 THEN NULL ELSE printf("%.1f", (CAST(SUM(hp.raiseToStealDone) AS REAL) / SUM(hp.raiseToStealChance)) * 100) END  AS rts,
-                                                       printf("%.2f", SUM(hp.totalProfit))                                                                                                                      AS net
+                                                       printf("%.2f", SUM(hp.totalProfit))                                                                                                                      AS net,
+                                                       printf("%.2f", (AVG(hp.totalProfit) / gt.bigBlind) * 100)                                                                                                AS bb100
                                                 FROM Hands h
                                                 INNER JOIN GameTypes gt
                                                 ON gt.id = h.gameTypeId
