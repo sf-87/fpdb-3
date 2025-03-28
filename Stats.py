@@ -102,16 +102,7 @@ def n(stat_dict, player):
         fmt = f"{n}"
 
         if n >= 10000:
-            k = n / 1000
-            c = n % 1000
-            _c = float(c) / 100.0
-            d = int(round(_c))
-
-            if d == 10:
-                k += 1
-                d = 0
-
-            fmt = f"{k:.0f}.{d}k"
+            fmt = f"{n / 1000:.1f}k"
 
         return fmt, f"n={n}", f"", "Number of hands seen"
     except Exception:
