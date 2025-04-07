@@ -16,7 +16,7 @@
               of 16.7 (50 divided by 3) to big blind of 150 (50 times 3) are included
             - To include all levels, use a value of "10000"
     -->
-    <hud_ui tour_aggregation_level_multiplier="10000" tour_seats_style="E" cash_aggregation_level_multiplier="1" cash_seats_style="A" label="FPDB Menu" hud_menu_x_shift="5" hud_menu_y_shift="20"/>
+    <hud_ui tour_aggregation_level_multiplier="10000" tour_seats_style="E" cash_aggregation_level_multiplier="10000" cash_seats_style="A" label="FPDB Menu" hud_menu_x_shift="5" hud_menu_y_shift="20"/>
     <site site_name="PokerStars" screen_name="SamFio87" hh_path="C:\Users\sf\AppData\Local\PokerStars.IT\HandHistory\SamFio87" ts_path="C:\Users\sf\AppData\Local\PokerStars.IT\TournSummary\SamFio87">
         <fav max="2" fav_seat="1"/>
         <fav max="3" fav_seat="2"/>
@@ -89,21 +89,30 @@
             <location seat="9" x="168" y="83"/>
         </layout>
     </layout_set>
-    <stat_set rows="3" cols="5" bg_color="#000000" fg_color="#FFFFFF" font_family="Sans" font_size="6" opacity="0.8">
+    <stat_set rows="4" cols="6" bg_color="#000000" fg_color="#FFFFFF" font_family="Sans" font_size="6" opacity="0.8">
 		<stat row_col="(1,1)" stat_name="vpip" stat_hi_color="#F05000" stat_hi_val="40" stat_lo_color="#408000" stat_lo_val="25"/>
 		<stat row_col="(1,2)" stat_name="pfr" stat_hi_color="#F05000" stat_hi_val="35" stat_lo_color="#408000" stat_lo_val="20"/>
 		<stat row_col="(1,3)" stat_name="three_B" stat_hi_color="#F05000" stat_hi_val="13" stat_lo_color="#408000" stat_lo_val="4"/>
-		<stat row_col="(1,4)" stat_name="steal"/>
-		<stat row_col="(1,5)" stat_name="raiseToSteal"/>
-		<stat row_col="(2,1)" stat_name="f_BB_steal"/>
-		<stat row_col="(2,2)" stat_name="f_SB_steal"/>
-		<stat row_col="(2,3)" stat_name="cb1"/>
-		<stat row_col="(2,4)" stat_name="f_cb1"/>
-		<stat row_col="(2,5)" stat_name="ffreq1"/>
-		<stat row_col="(3,1)" stat_name="cb2"/>
-		<stat row_col="(3,2)" stat_name="f_cb2"/>
-		<stat row_col="(3,3)" stat_name="ffreq2"/>
-		<stat row_col="(3,4)" stat_name="ffreq3"/>
-		<stat row_col="(3,5)" stat_name="n"/>
+		<stat row_col="(1,4)" stat_name="four_B" stat_hi_color="#F05000" stat_hi_val="10" stat_lo_color="#408000" stat_lo_val="4"/>
+		<stat row_col="(1,5)" stat_name="f_3bet"/>
+		<stat row_col="(1,6)" stat_name="f_4bet"/>
+		<stat row_col="(2,1)" stat_name="wtsd" stat_hi_color="#F05000" stat_hi_val="40" stat_lo_color="#408000" stat_lo_val="25"/>
+		<stat row_col="(2,2)" stat_name="wwsf" stat_hi_color="#F05000" stat_hi_val="45" stat_lo_color="#408000" stat_lo_val="30"/>
+		<stat row_col="(2,3)" stat_name="steal"/>
+		<stat row_col="(2,4)" stat_name="raiseToSteal"/>
+		<stat row_col="(2,5)" stat_name="f_BB_steal"/>
+		<stat row_col="(2,6)" stat_name="f_SB_steal"/>
+		<stat row_col="(3,1)" stat_name="cb1"/>
+		<stat row_col="(3,2)" stat_name="f_cb1"/>
+		<stat row_col="(3,3)" stat_name="ffreq1"/>
+		<stat row_col="(3,4)" stat_name="cb2"/>
+		<stat row_col="(3,5)" stat_name="f_cb2"/>
+		<stat row_col="(3,6)" stat_name="ffreq2"/>
+		<stat row_col="(4,1)" stat_name="cr1"/>
+		<stat row_col="(4,2)" stat_name="cr2"/>
+		<stat row_col="(4,3)" stat_name="cr3"/>
+		<stat row_col="(4,4)" stat_name="f_cb3"/>
+		<stat row_col="(4,5)" stat_name="ffreq3"/>
+		<stat row_col="(4,6)" stat_name="n"/>
     </stat_set>
 </FreePokerDatabaseConfig>

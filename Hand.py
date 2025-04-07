@@ -121,6 +121,7 @@ class Hand(object):
                 self.hand[f"boardCard{i + 1}"] = None
 
         DerivedStats.vpip(self)
+        DerivedStats.calc_streets_seen(self)
 
         self.set_positions()
 
@@ -148,6 +149,9 @@ class Hand(object):
 
             if player_name in list(self.collectees.keys()):
                 player_stats["winnings"] = self.collectees[player_name]
+
+                if player_stats["street1Seen"]:
+                    player_stats["wonWhenSeenStreet1"] = True
 
             paid = player_stats["startStack"] - self.stacks[player_name]
             player_stats["totalProfit"] = player_stats["winnings"] - paid

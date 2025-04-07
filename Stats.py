@@ -87,6 +87,24 @@ def pfr(stat_dict, player):
     except Exception:
         return "NA", "pfr=NA", "(0/0)", "Preflop raise %"
 
+def wtsd(stat_dict, player):
+    # Calculate and return the percentage of hands where a player went to showdown when saw flop.
+    # 
+    # Args:
+    #     stat_dict (dict): A dictionary containing player statistics.
+    #     player (int): The player for whom the percentage is calculated.
+    # 
+    # Returns:
+    #     tuple: A tuple containing the percentage value, formatted percentage percentages, and related information.
+    try:
+        opp = stat_dict[player]["saw_1"]
+        action = stat_dict[player]["sd"]
+        stat = float(action) / opp
+
+        return f"{stat * 100:3.1f}", f"wtsd={stat * 100:3.1f}", f"({action}/{opp})", "% went to showdown when saw flop"
+    except Exception:
+        return "NA", "wtsd=NA", "(0/0)", "% went to showdown when saw flop"
+
 def n(stat_dict, player):
     # Calculate and format the number of hands seen for a player.
     # 
@@ -274,6 +292,24 @@ def f_4bet(stat_dict, player):
         return f"{stat * 100:3.1f}", f"F4B_pf={stat * 100:3.1f}", f"({action}/{opp})", "% fold to 4 bet preflop"
     except Exception:
         return "NA", "F4B_pf=NA", "(0/0)", "% fold to 4 bet preflop"
+
+def wwsf(stat_dict, player):
+    # Calculate the win money percentage when seeing the flop.
+    # 
+    # Args:
+    #     stat_dict (dict): A dictionary containing player statistics.
+    #     player (int): The player for whom the statistics are calculated.
+    # 
+    # Returns:
+    #     tuple: A tuple containing various win money percentage statistics and descriptions.
+    try:
+        opp = stat_dict[player]["saw_1"]
+        action = stat_dict[player]["won_saw_1"]
+        stat = float(action) / opp
+
+        return f"{stat * 100:3.1f}", f"wwsf={stat * 100:3.1f}", f"({action}/{opp})", "% won money when saw flop"
+    except Exception:
+        return "NA", "wwsf=NA", "(0/0)", "% won money when saw flop"
 
 def cb1(stat_dict, player):
     # Calculate the continuation bet statistic for a given player on flop.
