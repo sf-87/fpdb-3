@@ -10,6 +10,7 @@ def stats_initializer():
     init["card2"] = None
     init["winnings"] = 0
     init["totalProfit"] = 0
+    init["sawShowdown"] = False
     init["startingHand"] = None
     init["street0VPIChance"] = True
     init["street0VPI"] = False
@@ -31,8 +32,10 @@ def stats_initializer():
     init["foldedBBToSteal"] = False
     init["foldSBToStealChance"] = False
     init["foldedSBToSteal"] = False
+    init["wonWhenSeenStreet1"] = False
 
     for i in range(1, 4):
+        init[f"street{i}Seen"] = False
         init[f"otherRaisedStreet{i}"] = False
         init[f"foldToOtherRaisedStreet{i}"] = False
         init[f"street{i}CBChance"] = False
@@ -59,6 +62,27 @@ def vpip(hand):
     if len(vpipers) == 0 and bb:
         hand.hand_players[bb[0]]["street0VPIChance"] = False
         hand.hand_players[bb[0]]["street0AggrChance"] = False
+
+def calc_streets_seen(hand):
+    p_in = set([x[0] for x in hand.actions[hand.action_streets[1]]])
+
+    for action in hand.actions[hand.action_streets[1]]:
+        if action[1] == "folds":
+            p_in.discard(action[0])
+
+    for i, street in enumerate(hand.action_streets[2:]):
+        if len(p_in) == 1:
+            return
+
+        for player in p_in:
+            hand.hand_players[player][f"street{i + 1}Seen"] = True
+
+        for action in hand.actions[street]:
+            if action[1] == "folds":
+                p_in.discard(action[0])
+
+    for player in p_in:
+        hand.hand_players[player]["sawShowdown"] = True
 
 def calc_steals(hand):
     # Fills fold(BB|SB)ToSteal(Chance)
@@ -105,7 +129,7 @@ def calc_tfbets(hand):
     # Fills street0(T|F)B(Chance|Done)
     # bet_level after 3-bet is equal to 3
 
-    bet_level, raise_chance, action_cnt, first_agressor = 1, True, {}, None
+    bet_level, raise_chance, action_cnt = 1, True, {}
 
     p_in = set([x[0] for x in hand.actions[hand.action_streets[1]]])
 
